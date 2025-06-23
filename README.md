@@ -52,22 +52,44 @@ This file controls which sources Pkgz uses. If the file is missing, Pkgz will no
 
 ## 🛠 Installation
 
-### Option 1: Prebuilt Binary
-
-Download from [Releases](https://github.com/yourusername/pkgz/releases), then:
-
-```bash
-sudo mv pkgz /usr/local/bin/
-sudo chmod +x /usr/local/bin/pkgz
-```
-
-### Option 2: Build from Source
+### Option 1: Build from Source
 
 ```bash
 git clone https://github.com/yourusername/pkgz
 cd pkgz
 crystal build src/pkgz.cr --release -o pkgz
 sudo mv pkgz /usr/local/bin/
+```
+
+---
+
+### Option 2: Install via `.deb`
+
+If you're on a Debian-based system, you can install Pkgz with the prebuilt `.deb` package:
+
+```bash
+wget https://github.com/yourusername/pkgz/releases/download/v0.1.2/pkgz_0.1.2.deb
+sudo dpkg -i pkgz_0.1.2.deb
+sudo apt-get install -f  # Installs any missing dependencies
+```
+
+This will install `pkgz` into `/usr/bin`.
+
+> 💡 **Note:** If you previously copied a binary to `/usr/local/bin`, remove it first:
+>
+> ```bash
+> sudo rm /usr/local/bin/pkgz
+> ```
+
+---
+
+### Option 3: Prebuilt Binary (Manual)
+
+Download from [Releases](https://github.com/yourusername/pkgz/releases), then:
+
+```bash
+sudo mv pkgz /usr/local/bin/
+sudo chmod +x /usr/local/bin/pkgz
 ```
 
 ---

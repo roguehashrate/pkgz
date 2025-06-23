@@ -55,7 +55,7 @@ This file controls which sources Pkgz uses. If the file is missing, Pkgz will no
 ### Option 1: Build from Source
 
 ```bash
-git clone https://github.com/yourusername/pkgz
+git clone https://github.com/roguehashrate/pkgz
 cd pkgz
 crystal build src/pkgz.cr --release -o pkgz
 sudo mv pkgz /usr/local/bin/
@@ -68,7 +68,7 @@ sudo mv pkgz /usr/local/bin/
 If you're on a Debian-based system, you can install Pkgz with the prebuilt `.deb` package:
 
 ```bash
-wget https://github.com/yourusername/pkgz/releases/download/v0.1.2/pkgz_0.1.2.deb
+wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.2/pkgz_0.1.2.deb
 sudo dpkg -i pkgz_0.1.2.deb
 sudo apt-get install -f  # Installs any missing dependencies
 ```
@@ -99,7 +99,7 @@ sudo chmod +x /usr/local/bin/pkgz
 Download the tarball from [Releases](https://github.com/yourusername/pkgz/releases):
 
 ```bash
-wget https://github.com/yourusername/pkgz/releases/download/v0.1.2/pkgz-0.1.2-x86_64.tar.xz
+wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.2/pkgz-0.1.2-x86_64.tar.xz
 ```
 
 Extract and install:

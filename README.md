@@ -1,37 +1,60 @@
 # Pkgz
 
-A simple Crystal CLI tool to install, remove, and update applications from APT and Flatpak on Debian-based GNU/Linux systems.
-
-Supports interactive selection when apps are available from multiple sources and manages privilege escalation via system commands.
+**Pkgz** is a fast, extensible CLI tool written in Crystal 💎 for managing software packages across multiple Linux distributions. It supports system and Flatpak packages, with automatic privilege elevation (`sudo`/`doas`) and interactive source selection.
 
 ---
 
-## Features
+## ✨ Features
 
-- Install apps from APT or Flatpak  
-- Remove apps from all supported sources  
-- Update system and Flatpak packages  
-- Interactive choice when multiple sources provide the same app  
-- Extensible design for adding more package sources  
-
----
-
-## Requirements
-
-- Crystal programming language installed (for building from source)  
-- Debian-based Linux (Ubuntu, Debian, etc.)  
-- APT and Flatpak installed and configured  
-- Optional: sudo or doas for privilege escalation  
+- ✅ Install, remove, and update apps  
+- 🔍 Interactive source selection if app is available in multiple places  
+- 🔐 Uses `doas` or `sudo` automatically  
+- 📦 Supports:
+  - APT/Nala (Debian/Ubuntu)
+  - Flatpak
+  - Pacman (Arch)
+  - Paru (AUR helper)
+  - DNF (Fedora/RHEL)
+- ⚙️ Configurable via `~/.config/pkgz/config.toml`  
+- 🌱 Extensible for other package managers  
 
 ---
 
-## Installation
+## 📦 Requirements
 
-### Option 1: Use the Precompiled Binary
+- [Crystal](https://crystal-lang.org) (for building from source)
+- One or more of the following package managers installed:
+  - `apt`, `nala`, `flatpak`, `pacman`, `paru`, `dnf`
+- `sudo` or `doas`
+- (Optional) `flatpak` for Flatpak support
 
-Download the `pkgz` binary from the [Releases](https://github.com/yourusername/pkgz/releases) section.
+---
 
-Move it to a directory in your PATH (e.g., `/usr/local/bin`):
+## ⚙️ Configuration
+
+Create the file:  
+`~/.config/pkgz/config.toml`
+
+Example:
+
+```toml
+[sources]
+apt = true
+flatpak = true
+paru = true
+pacman = false
+dnf = false
+```
+
+This file controls which sources Pkgz uses. If the file is missing, Pkgz will notify the user and exit.
+
+---
+
+## 🛠 Installation
+
+### Option 1: Prebuilt Binary
+
+Download from [Releases](https://github.com/yourusername/pkgz/releases), then:
 
 ```bash
 sudo mv pkgz /usr/local/bin/
@@ -40,39 +63,31 @@ sudo chmod +x /usr/local/bin/pkgz
 
 ### Option 2: Build from Source
 
-Clone this repository or download the `pkgz.cr` file.
-
-Compile the program:
-
 ```bash
+git clone https://github.com/yourusername/pkgz
+cd pkgz
 crystal build src/pkgz.cr --release -o pkgz
-```
-
-(Optional) Move the compiled binary to your PATH:
-
-```bash
 sudo mv pkgz /usr/local/bin/
 ```
 
 ---
 
-## Usage
+## 🚀 Usage
 
 ```bash
-pkgz <command> [app-name]
+pkgz <install|remove|update|--version> [app-name]
 ```
 
-You can run commands like:
+### Examples:
 
-- `install <app-name>` — install an app  
-- `remove <app-name>` — remove an app from all sources  
-- `update` — update all package sources  
+```bash
+pkgz install gimp
+pkgz remove neofetch
+pkgz update
+pkgz --version
+```
 
-If multiple sources provide the app, you’ll be prompted to choose.
-
----
-
-## Example
+### Sample Output
 
 ```bash
 $ pkgz install gimp
@@ -84,22 +99,31 @@ Which one would you like to use? [1-2]: 2
 🚀 Installing with Flatpak...
 ```
 
-```bash
-$ pkgz remove tmux
-❌ Trying to remove 'tmux' from APT...
-❌ Trying to remove 'tmux' from Flatpak...
-```
+---
 
-```bash
-$ pkgz update
-⬆️  Updating APT packages...
-⬆️  Updating Flatpak packages...
-```
+## 🔐 Privilege Elevation
+
+- Automatically uses `doas` if available, otherwise falls back to `sudo`.
+- Commands requiring root privileges (like installing or updating system packages) are handled automatically.
 
 ---
 
-## License
+## 🧩 Extending Support
+
+To add a new package manager, subclass `Pkgz::Source` and implement:
+
+- `name`
+- `available?(app)`
+- `install(app)`
+- `remove(app)`
+- `update`
+
+Then load it in `Pkgz.available_sources` based on binary presence and config.
+
+---
+
+## 🪪 License
 
 MIT License
 
-Created with Crystal 💎 by roguehashrate
+Created with ❤️ by [roguehashrate](https://github.com/roguehashrate)

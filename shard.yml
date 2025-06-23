@@ -1,5 +1,5 @@
 name: pkgz
-version: 0.1.1
+version: 0.1.2
 
 authors:
   - roguehashrate <roguehashrate@gmail.com>
@@ -7,6 +7,11 @@ authors:
 targets:
   pkgz:
     main: src/pkgz.cr
+
+dependencies:
+  toml:
+    github: crystal-community/toml.cr
+
 
 crystal: '>= 1.16.3'
 

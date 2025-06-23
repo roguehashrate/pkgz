@@ -1,8 +1,10 @@
 # src/pkgz.cr
-module Pkgz
-  VERSION = "0.1.1"
+require "toml"
 
-  # Auto-detect whether to use doas or sudo
+module Pkgz
+  VERSION = "0.1.2"
+  CONFIG_PATH = "#{ENV["HOME"]}/.config/pkgz/config.toml"
+
   @@elevator = nil
   @@apt_cmd = nil
 
@@ -20,7 +22,29 @@ module Pkgz
     @@apt_cmd.not_nil!
   end
 
-  # Abstract blueprint for a package source
+  def self.load_config : Hash(String, Bool)
+    unless File.exists?(CONFIG_PATH)
+      puts "❌ Config file not found at #{CONFIG_PATH}"
+      puts "Please create it manually with the sources you want enabled."
+      puts "Example:" 
+      puts <<-TOML
+            [sources]
+            apt = true
+            flatpak = true
+            paru = false
+            pacman = false
+            dnf = false
+      TOML
+      exit 1
+    end
+
+    config = TOML.parse(File.read(CONFIG_PATH))
+    config_sources = config["sources"]?.try &.as_h || {} of String => TOML::Any
+
+
+    config_sources.transform_values(&.as_bool)
+  end
+
   abstract class Source
     abstract def name : String
     abstract def available?(app : String) : Bool
@@ -29,7 +53,6 @@ module Pkgz
     abstract def update : Nil
   end
 
-  # APT/Nala Source implementation
   class AptSource < Source
     def name : String
       Pkgz.apt_command.upcase
@@ -53,7 +76,6 @@ module Pkgz
     end
   end
 
-  # Flatpak Source implementation
   class FlatpakSource < Source
     def name : String
       "Flatpak"
@@ -77,7 +99,75 @@ module Pkgz
     end
   end
 
-  # App install logic
+  class PacmanSource < Source
+    def name : String
+      "Pacman"
+    end
+
+    def available?(app : String) : Bool
+      output = `pacman -Ss #{app}`
+      output.includes?(app)
+    end
+
+    def install(app : String) : Nil
+      Pkgz.privileged("pacman -S --noconfirm #{app}")
+    end
+
+    def remove(app : String) : Nil
+      Pkgz.privileged("pacman -R --noconfirm #{app}")
+    end
+
+    def update : Nil
+      Pkgz.privileged("pacman -Syu --noconfirm")
+    end
+  end
+
+  class ParuSource < Source
+    def name : String
+      "Paru (AUR)"
+    end
+
+    def available?(app : String) : Bool
+      output = `paru -Ss #{app}`
+      output.includes?(app)
+    end
+
+    def install(app : String) : Nil
+      Pkgz.privileged("paru -S --noconfirm #{app}")
+    end
+
+    def remove(app : String) : Nil
+      Pkgz.privileged("paru -R --noconfirm #{app}")
+    end
+
+    def update : Nil
+      Pkgz.privileged("paru -Syu --noconfirm")
+    end
+  end
+
+  class DnfSource < Source
+    def name : String
+      "DNF"
+    end
+
+    def available?(app : String) : Bool
+      output = `dnf search #{app}`
+      output.includes?(app)
+    end
+
+    def install(app : String) : Nil
+      Pkgz.privileged("dnf install -y #{app}")
+    end
+
+    def remove(app : String) : Nil
+      Pkgz.privileged("dnf remove -y #{app}")
+    end
+
+    def update : Nil
+      Pkgz.privileged("dnf upgrade -y")
+    end
+  end
+
   def self.find_and_install(app : String, sources : Array(Source))
     puts "🔍 Searching for '#{app}' in sources..."
 
@@ -114,18 +204,29 @@ module Pkgz
 end
 
 # ─────────────────────────────────────────────
-# CLI Entry Point (outside the module)
+# CLI Entry Point
 # ─────────────────────────────────────────────
-
 if ARGV.size < 1
-  puts "Usage: pkgz <install|remove|update> [app-name]"
+  puts "Usage: pkgz <install|remove|update|--version> [app-name]"
   exit
 end
 
 command = ARGV[0]
 app_name = ARGV[1]? # may be nil
 
-sources = [Pkgz::AptSource.new, Pkgz::FlatpakSource.new]
+if command == "--version"
+  puts "Pkgz version #{Pkgz::VERSION}"
+  exit
+end
+
+enabled_sources = Pkgz.load_config
+
+sources = [] of Pkgz::Source
+sources << Pkgz::AptSource.new     if enabled_sources["apt"]?
+sources << Pkgz::FlatpakSource.new if enabled_sources["flatpak"]?
+sources << Pkgz::PacmanSource.new  if enabled_sources["pacman"]?
+sources << Pkgz::ParuSource.new    if enabled_sources["paru"]?
+sources << Pkgz::DnfSource.new     if enabled_sources["dnf"]?
 
 case command
 when "install"

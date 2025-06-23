@@ -1,0 +1,13 @@
+name: pkgz
+version: 0.1.0
+
+authors:
+  - roguehashrate <roguehashrate@gmail.com>
+
+targets:
+  pkgz:
+    main: src/pkgz.cr
+
+crystal: '>= 1.16.3'
+
+license: MIT

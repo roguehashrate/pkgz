@@ -94,6 +94,33 @@ sudo chmod +x /usr/local/bin/pkgz
 
 ---
 
+### Option 4: Tarball (Recommended for Arch and others)
+
+Download the tarball from [Releases](https://github.com/yourusername/pkgz/releases):
+
+```bash
+wget https://github.com/yourusername/pkgz/releases/download/v0.1.2/pkgz-0.1.2-x86_64.tar.xz
+```
+
+Extract and install:
+
+```bash
+tar -xvf pkgz-0.1.2-x86_64.tar.xz
+sudo cp pkgz-0.1.2/usr/bin/pkgz /usr/bin/
+```
+
+Or for a user-local install:
+
+```bash
+tar -xvf pkgz-0.1.2-x86_64.tar.xz
+mkdir -p ~/.local/bin
+cp pkgz-0.1.2/usr/bin/pkgz ~/.local/bin/
+```
+
+Make sure `~/.local/bin` is in your PATH.
+
+---
+
 ## 🚀 Usage
 
 ```bash

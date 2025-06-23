@@ -1,15 +1,23 @@
 # src/pkgz.cr
 module Pkgz
-  VERSION = "0.1.0"
+  VERSION = "0.1.1"
 
   # Auto-detect whether to use doas or sudo
   @@elevator = nil
+  @@apt_cmd = nil
 
   def self.privileged(cmd : String) : Nil
     if @@elevator.nil?
       @@elevator = system("which doas > /dev/null 2>&1") ? "doas" : "sudo"
     end
     system("#{@@elevator} #{cmd}")
+  end
+
+  def self.apt_command : String
+    if @@apt_cmd.nil?
+      @@apt_cmd = system("which nala > /dev/null 2>&1") ? "nala" : "apt"
+    end
+    @@apt_cmd.not_nil!
   end
 
   # Abstract blueprint for a package source
@@ -21,10 +29,10 @@ module Pkgz
     abstract def update : Nil
   end
 
-  # APT Source implementation
+  # APT/Nala Source implementation
   class AptSource < Source
     def name : String
-      "APT"
+      Pkgz.apt_command.upcase
     end
 
     def available?(app : String) : Bool
@@ -33,15 +41,15 @@ module Pkgz
     end
 
     def install(app : String) : Nil
-      Pkgz.privileged("apt install -y #{app}")
+      Pkgz.privileged("#{Pkgz.apt_command} install -y #{app}")
     end
 
     def remove(app : String) : Nil
-      Pkgz.privileged("apt remove -y #{app}")
+      Pkgz.privileged("#{Pkgz.apt_command} remove -y #{app}")
     end
 
     def update : Nil
-      Pkgz.privileged("apt update && apt upgrade -y")
+      Pkgz.privileged("#{Pkgz.apt_command} update && #{Pkgz.apt_command} upgrade -y")
     end
   end
 
@@ -69,7 +77,7 @@ module Pkgz
     end
   end
 
-  # Interactive app install logic
+  # App install logic
   def self.find_and_install(app : String, sources : Array(Source))
     puts "🔍 Searching for '#{app}' in sources..."
 

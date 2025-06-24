@@ -1,47 +1,63 @@
-# src/pkgz.cr
 require "toml"
 
 module Pkgz
   VERSION = "0.1.2"
   CONFIG_PATH = "#{ENV["HOME"]}/.config/pkgz/config.toml"
+  @@elevator : String? = nil
 
-  @@elevator = nil
-  @@apt_cmd = nil
+  def self.get_elevator_command : String
+   return @@elevator.not_nil! if @@elevator
 
-  def self.privileged(cmd : String) : Nil
-    if @@elevator.nil?
-      @@elevator = system("which doas > /dev/null 2>&1") ? "doas" : "sudo"
-    end
-    system("#{@@elevator} #{cmd}")
+   if File.exists?(CONFIG_PATH)
+     begin
+       config = TOML.parse(File.read(CONFIG_PATH))
+       elevator_section = config["elevator"]?.try(&.as_h)
+       if elevator_section
+         raw_cmd = elevator_section["command"]?.try(&.as_s)
+         cmd = raw_cmd ? raw_cmd.strip : nil
+         if cmd && !cmd.empty?
+           @@elevator = cmd
+           return @@elevator.not_nil!
+         end
+       end
+     rescue
+       # ignore errors
+     end
   end
 
-  def self.apt_command : String
-    if @@apt_cmd.nil?
-      @@apt_cmd = system("which nala > /dev/null 2>&1") ? "nala" : "apt"
-    end
-    @@apt_cmd.not_nil!
+  # fallback detection
+  @@elevator = system("which doas > /dev/null 2>&1") ? "doas" : "sudo"
+  @@elevator.not_nil!
+end
+
+
+  def self.privileged(cmd : String) : Nil
+    elevator = get_elevator_command
+    system("#{elevator} #{cmd}")
   end
 
   def self.load_config : Hash(String, Bool)
     unless File.exists?(CONFIG_PATH)
       puts "❌ Config file not found at #{CONFIG_PATH}"
       puts "Please create it manually with the sources you want enabled."
-      puts "Example:" 
       puts <<-TOML
-            [sources]
-            apt = true
-            flatpak = true
-            paru = false
-            pacman = false
-            dnf = false
+        [sources]
+        apt = true
+        nala = false
+        flatpak = true
+        paru = false
+        pacman = false
+        dnf = false
+        pacstall = true
+
+        [elevator]
+        command = \"sudo\"
       TOML
       exit 1
     end
 
     config = TOML.parse(File.read(CONFIG_PATH))
-    config_sources = config["sources"]?.try &.as_h || {} of String => TOML::Any
-
-
+    config_sources = config["sources"]?.try(&.as_h) || {} of String => TOML::Any
     config_sources.transform_values(&.as_bool)
   end
 
@@ -55,24 +71,45 @@ module Pkgz
 
   class AptSource < Source
     def name : String
-      Pkgz.apt_command.upcase
+      "APT"
     end
 
     def available?(app : String) : Bool
-      output = `apt-cache search #{app}`
-      output.includes?(app)
+      `apt-cache search #{app}`.includes?(app)
     end
 
     def install(app : String) : Nil
-      Pkgz.privileged("#{Pkgz.apt_command} install -y #{app}")
+      Pkgz.privileged("apt install -y #{app}")
     end
 
     def remove(app : String) : Nil
-      Pkgz.privileged("#{Pkgz.apt_command} remove -y #{app}")
+      Pkgz.privileged("apt remove -y #{app}")
     end
 
     def update : Nil
-      Pkgz.privileged("#{Pkgz.apt_command} update && #{Pkgz.apt_command} upgrade -y")
+      Pkgz.privileged("sh -c \"apt update && apt upgrade -y\"")
+    end
+  end
+
+  class NalaSource < Source
+    def name : String
+      "NALA"
+    end
+
+    def available?(app : String) : Bool
+      `nala search #{app}`.includes?(app)
+    end
+
+    def install(app : String) : Nil
+      Pkgz.privileged("nala install -y #{app}")
+    end
+
+    def remove(app : String) : Nil
+      Pkgz.privileged("nala remove -y #{app}")
+    end
+
+    def update : Nil
+      Pkgz.privileged("nala update && nala upgrade -y")
     end
   end
 
@@ -82,8 +119,7 @@ module Pkgz
     end
 
     def available?(app : String) : Bool
-      output = `flatpak search #{app}`
-      output.includes?(app)
+      `flatpak search #{app}`.includes?(app)
     end
 
     def install(app : String) : Nil
@@ -105,8 +141,7 @@ module Pkgz
     end
 
     def available?(app : String) : Bool
-      output = `pacman -Ss #{app}`
-      output.includes?(app)
+      `pacman -Ss #{app}`.includes?(app)
     end
 
     def install(app : String) : Nil
@@ -128,8 +163,7 @@ module Pkgz
     end
 
     def available?(app : String) : Bool
-      output = `paru -Ss #{app}`
-      output.includes?(app)
+      `paru -Ss #{app}`.includes?(app)
     end
 
     def install(app : String) : Nil
@@ -151,8 +185,7 @@ module Pkgz
     end
 
     def available?(app : String) : Bool
-      output = `dnf search #{app}`
-      output.includes?(app)
+      `dnf search #{app}`.includes?(app)
     end
 
     def install(app : String) : Nil
@@ -165,6 +198,28 @@ module Pkgz
 
     def update : Nil
       Pkgz.privileged("dnf upgrade -y")
+    end
+  end
+
+  class PacstallSource < Source
+    def name : String
+      "Pacstall"
+    end
+
+    def available?(app : String) : Bool
+      `pacstall -S #{app}`.includes?(app)
+    end
+
+    def install(app : String) : Nil
+      Pkgz.privileged("pacstall -I #{app}")
+    end
+
+    def remove(app : String) : Nil
+      Pkgz.privileged("pacstall -R #{app}")
+    end
+
+    def update : Nil
+      Pkgz.privileged("pacstall -Up")
     end
   end
 
@@ -191,7 +246,7 @@ module Pkgz
     end
 
     print "Which one would you like to use? [1-#{available_sources.size}]: "
-    choice = gets.try &.to_i || 0
+    choice = gets.try(&.to_i) || 0
     selected = available_sources[choice - 1]?
 
     if selected
@@ -203,16 +258,16 @@ module Pkgz
   end
 end
 
-# ─────────────────────────────────────────────
 # CLI Entry Point
-# ─────────────────────────────────────────────
 if ARGV.size < 1
   puts "Usage: pkgz <install|remove|update|--version> [app-name]"
   exit
 end
 
+puts "🚪 Elevator detected: #{Pkgz.get_elevator_command}"
+
 command = ARGV[0]
-app_name = ARGV[1]? # may be nil
+app_name = ARGV[1]?
 
 if command == "--version"
   puts "Pkgz version #{Pkgz::VERSION}"
@@ -223,10 +278,12 @@ enabled_sources = Pkgz.load_config
 
 sources = [] of Pkgz::Source
 sources << Pkgz::AptSource.new     if enabled_sources["apt"]?
+sources << Pkgz::NalaSource.new    if enabled_sources["nala"]?
 sources << Pkgz::FlatpakSource.new if enabled_sources["flatpak"]?
 sources << Pkgz::PacmanSource.new  if enabled_sources["pacman"]?
 sources << Pkgz::ParuSource.new    if enabled_sources["paru"]?
 sources << Pkgz::DnfSource.new     if enabled_sources["dnf"]?
+sources << Pkgz::PacstallSource.new if enabled_sources["pacstall"]?
 
 case command
 when "install"

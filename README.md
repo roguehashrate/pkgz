@@ -1,7 +1,7 @@
 # Pkgz
 
 <p align="center">
-  <img src="/assets/pkgz-logo.png" alt="Pkgz Logo" width="200"/>
+  <img src="/assets/pkgz-logo.png" alt="Pkgz Logo" width="400"/>
 </p>
 
 

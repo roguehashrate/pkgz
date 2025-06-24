@@ -187,4 +187,4 @@ To add support for a new package manager:
 
 MIT License
 
-Created with ❤️ by [roguehashrate](https://github.com/roguehashrate)
+Created by [roguehashrate](https://github.com/roguehashrate)

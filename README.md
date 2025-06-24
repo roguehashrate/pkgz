@@ -120,7 +120,7 @@ Make sure `~/.local/bin` is in your PATH.
 2. Install the local `.pacstall` package file using:
 
 ```bash
-pacstall -I /path/to/pkgz-0.1.3.pacstall
+pacstall -I /path/to/pkgz.pacstall
 ```
 
 This will install `pkgz` without needing to publish the package remotely.

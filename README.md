@@ -1,5 +1,11 @@
 # Pkgz
 
+<p align="center">
+  <img src="/assets/pkgz-logo.png" alt="Pkgz Logo" width="200"/>
+</p>
+
+
+
 **Pkgz** is a fast, extensible CLI tool written in Crystal 💎 for managing software packages across multiple Linux distributions. It supports system and Flatpak packages, with automatic privilege elevation (`sudo`/`doas`) and interactive source selection.
 
 ---

@@ -28,11 +28,18 @@
 
 ## 📦 Requirements
 
-- [Crystal](https://crystal-lang.org) (if building from source)  
-- One or more package managers installed:
-  - `apt`, `nala`, `flatpak`, `pacman`, `paru`, `dnf`, `pacstall`  
-- `sudo` or `doas` installed  
-- (Optional) `flatpak` for Flatpak support
+To use **pkgz**, you’ll need the following:
+
+- **Privilege elevation:**  
+  Either `sudo` or `doas` must be installed
+
+- **At least one supported package manager:**  
+  `apt`, `nala`, `pacman`, `paru`, `dnf`, or `pacstall`
+
+- **Crystal compiler:**  
+  Only needed if you're building from source  
+  (Prebuilt binaries don’t require Crystal)
+
 
 ---
 

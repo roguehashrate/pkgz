@@ -1,4 +1,3 @@
-# Pkgz
 
 <p align="center">
   <img src="/assets/pkgz-logo.png" alt="Pkgz Logo" width="400"/>

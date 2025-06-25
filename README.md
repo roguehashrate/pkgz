@@ -67,6 +67,19 @@ This controls enabled sources and privilege elevator. If missing, Pkgz will prom
 
 ## 🛠 Installation
 
+### 🧪 Recommended: One-liner Install (Linux x86_64)
+
+You can install the latest prebuilt binary directly with:
+
+```bash
+curl -sS https://raw.githubusercontent.com/roguehashrate/pkgz/main/install.sh | bash
+```
+
+This installs `pkgz` to `~/.local/bin`.  
+Make sure `~/.local/bin` is in your `$PATH`.
+
+---
+
 ### Build from Source
 
 ```bash

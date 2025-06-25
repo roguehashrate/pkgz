@@ -80,6 +80,19 @@ Make sure `~/.local/bin` is in your `$PATH`.
 
 ---
 
+### 🔐 Verify Download
+
+To verify the integrity of the binary:
+
+```bash
+curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.3/pkgz
+curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.3/pkgz.sha256
+
+sha256sum -c pkgz.sha256
+```
+
+---
+
 ### Build from Source
 
 ```bash

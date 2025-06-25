@@ -15,7 +15,7 @@
 - 🔍 Interactive source selection if app is available in multiple sources  
 - 🔐 Automatically uses `doas` or `sudo` for privilege elevation  
 - 📦 Supports:
-  - APT / Nala (Debian/Ubuntu)
+  - Apt / Nala (Debian/Ubuntu)
   - Flatpak
   - Pacman (Arch)
   - Paru (AUR helper)

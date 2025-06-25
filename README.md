@@ -5,13 +5,13 @@
 
 
 
-**Pkgz** is a fast, extensible CLI tool written in Crystal 💎 for managing software packages across multiple Linux distributions. It supports system and Flatpak packages, with automatic privilege elevation (`sudo`/`doas`) and interactive source selection.
+**Pkgz** is a fast, extensible CLI tool written in Crystal 💎 for managing software packages across multiple Linux distributions.
 
 ---
 
 ## ✨ Features
 
-- ✅ Install, remove, and update apps  
+- ✅ Install, remove, update and search apps  
 - 🔍 Interactive source selection if app is available in multiple sources  
 - 🔐 Automatically uses `doas` or `sudo` for privilege elevation  
 - 📦 Supports:

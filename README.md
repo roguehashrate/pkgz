@@ -81,8 +81,8 @@ sudo mv pkgz /usr/local/bin/
 ### Debian `.deb` Package
 
 ```bash
-wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.2/pkgz_0.1.2.deb
-sudo dpkg -i pkgz_0.1.2.deb
+wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.3/pkgz-0.1.3.deb
+sudo dpkg -i pkgz-0.1.3.deb
 sudo apt-get install -f  # Fix dependencies if needed
 ```
 
@@ -102,16 +102,16 @@ sudo chmod +x /usr/local/bin/pkgz
 ### Tarball (for Arch and others)
 
 ```bash
-wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.2/pkgz-0.1.2-x86_64.tar.xz
-tar -xvf pkgz-0.1.2-x86_64.tar.xz
-sudo cp pkgz-0.1.2/usr/bin/pkgz /usr/bin/
+wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.3/pkgz-0.1.3-x86_64.tar.xz
+tar -xvf pkgz-0.1.3-x86_64.tar.xz
+sudo cp pkgz-0.1.3/usr/bin/pkgz /usr/bin/
 ```
 
 Or install locally:
 
 ```bash
 mkdir -p ~/.local/bin
-cp pkgz-0.1.2/usr/bin/pkgz ~/.local/bin/
+cp pkgz-0.1.3/usr/bin/pkgz ~/.local/bin/
 ```
 
 Make sure `~/.local/bin` is in your PATH.

@@ -80,7 +80,7 @@ Make sure `~/.local/bin` is in your `$PATH`.
 
 ---
 
-### 🔐 Verify Download
+### 🔐 Verify Download (*Optional*)
 
 To verify the integrity of the binary:
 

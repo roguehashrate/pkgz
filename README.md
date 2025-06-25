@@ -30,14 +30,21 @@
 To use **pkgz**, you’ll need the following:
 
 - **Privilege elevation:**  
-  Either `sudo` or `doas` must be installed
+  Either `sudo` or `doas` must be installed and properly configured on your system.
 
 - **At least one supported package manager:**  
-  `apt`, `nala`, `pacman`, `paru`, `dnf`, or `pacstall`
+  One or more of the following package managers must be installed and enabled in your config:
+  - `apt` or `nala` (Debian/Ubuntu)
+  - `pacman` or `paru` (Arch Linux / AUR)
+  - `dnf` (Fedora/RHEL)
+  - `flatpak`
+  - `pacstall`
+  - `pkg` or FreeBSD Ports (FreeBSD)
+  - `pkg_add` or OpenBSD Ports (OpenBSD)
 
 - **Crystal compiler:**  
-  Only needed if you're building from source  
-  (Prebuilt binaries don’t require Crystal)
+  Only required if you are building **pkgz** from source.  
+  Prebuilt binaries are provided and do not require Crystal to be installed.
 
 ---
 

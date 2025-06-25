@@ -1,9 +1,6 @@
-
 <p align="center">
   <img src="/assets/pkgz-logo.png" alt="Pkgz Logo" width="400"/>
 </p>
-
-
 
 **Pkgz** is a fast, extensible CLI tool written in Crystal 💎 for managing software packages across multiple Linux distributions.
 
@@ -21,6 +18,8 @@
   - Paru (AUR helper)
   - DNF (Fedora/RHEL)
   - Pacstall
+  - FreeBSD & FreeBSD Ports
+  - OpenBSD & OpenBSD Ports
 - ⚙️ Configurable via `~/.config/pkgz/config.toml`  
 - 🌱 Extensible to support other package managers  
 
@@ -40,7 +39,6 @@ To use **pkgz**, you’ll need the following:
   Only needed if you're building from source  
   (Prebuilt binaries don’t require Crystal)
 
-
 ---
 
 ## ⚙️ Configuration
@@ -56,6 +54,10 @@ paru = false
 pacman = false
 dnf = false
 pacstall = true
+freebsd = false
+freebsd_ports = false
+openbsd = false
+openbsd_ports = false
 
 [elevator]
 command = "sudo"  # or "doas"
@@ -85,8 +87,8 @@ Make sure `~/.local/bin` is in your `$PATH`.
 To verify the integrity of the binary:
 
 ```bash
-curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.3/pkgz
-curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.3/pkgz.sha256
+curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.4/pkgz
+curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.4/pkgz.sha256
 
 sha256sum -c pkgz.sha256
 ```
@@ -107,8 +109,8 @@ sudo mv pkgz /usr/local/bin/
 ### Debian `.deb` Package
 
 ```bash
-wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.3/pkgz-0.1.3.deb
-sudo dpkg -i pkgz-0.1.3.deb
+wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.4/pkgz-0.1.4.deb
+sudo dpkg -i pkgz-0.1.4.deb
 sudo apt-get install -f  # Fix dependencies if needed
 ```
 
@@ -128,16 +130,16 @@ sudo chmod +x /usr/local/bin/pkgz
 ### Tarball (for Arch and others)
 
 ```bash
-wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.3/pkgz-0.1.3-x86_64.tar.xz
-tar -xvf pkgz-0.1.3-x86_64.tar.xz
-sudo cp pkgz-0.1.3/usr/bin/pkgz /usr/bin/
+wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.4/pkgz-0.1.4-x86_64.tar.gz
+tar -xvf pkgz-0.1.4-x86_64.tar.xz
+sudo cp pkgz-0.1.4/usr/bin/pkgz /usr/bin/
 ```
 
 Or install locally:
 
 ```bash
 mkdir -p ~/.local/bin
-cp pkgz-0.1.3/usr/bin/pkgz ~/.local/bin/
+cp pkgz-0.1.4/usr/bin/pkgz ~/.local/bin/
 ```
 
 Make sure `~/.local/bin` is in your PATH.

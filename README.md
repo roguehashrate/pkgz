@@ -141,7 +141,7 @@ The pacstall file will likely always be ahead of the pacstall repos.
 ## 🚀 Usage
 
 ```bash
-pkgz <install|remove|update|--version> [app-name]
+pkgz <install|remove|update|search|--version> [app-name]
 ```
 
 Examples:

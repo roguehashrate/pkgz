@@ -2,6 +2,8 @@
   <img src="/assets/pkgz-logo.png" alt="Pkgz Logo" width="400"/>
 </p>
 
+[![tldr-pages](https://img.shields.io/badge/tldr-included-blue?logo=readthedocs&style=flat-square)](https://github.com/tldr-pages/tldr/blob/main/pages/common/pkgz.md)
+
 **Pkgz** is a fast, extensible CLI tool written in Crystal 💎 for managing software packages across multiple Linux distributions.
 
 ---
@@ -199,6 +201,37 @@ $ pkgz install gimp
 Which one would you like to use? [1-2]: 2
 🚀 Installing with Flatpak...
 ```
+
+---
+
+### 🆘 Need Help Using `pkgz`?
+
+If you're ever unsure how to use `pkgz` or want a quick refresher on commands, the easiest way to get help is through the [`tldr`](https://tldr.sh) tool:
+
+<p align="center">
+  <img src="/assets/tldr.gif" alt="tldr pkgz demo" width="600"/>
+</p>
+
+#### 📥 Install `tldr`:
+
+```bash
+# Debian/Ubuntu
+sudo apt install tldr
+
+# Arch Linux
+sudo pacman -S tldr
+
+# macOS
+brew install tldr
+```
+
+#### 📖 Then run:
+
+```bash
+tldr pkgz
+```
+
+This will show a concise, community-maintained usage guide for `pkgz` directly in your terminal — no need to scroll through docs or flags.
 
 ---
 

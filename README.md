@@ -208,10 +208,6 @@ Which one would you like to use? [1-2]: 2
 
 If you're ever unsure how to use `pkgz` or want a quick refresher on commands, the easiest way to get help is through the [`tldr`](https://tldr.sh) tool:
 
-<p align="center">
-  <img src="/assets/tldr.gif" alt="tldr pkgz demo" width="600"/>
-</p>
-
 #### 📥 Install `tldr`:
 
 ```bash

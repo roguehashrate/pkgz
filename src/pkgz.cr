@@ -48,6 +48,10 @@ module Pkgz
         pacman = false
         dnf = false
         pacstall = true
+        freebsd = false
+        freebsd_ports = false
+        openbsd = false
+        openbsd_ports = false
 
         [elevator]
         command = "sudo"

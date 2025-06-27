@@ -1,7 +1,7 @@
 require "toml"
 
 module Pkgz
-  VERSION = "0.1.4"
+  VERSION     = "0.1.4"
   CONFIG_PATH = "#{ENV["HOME"]}/.config/pkgz/config.toml"
   @@elevator : String? = nil
 
@@ -364,113 +364,116 @@ module Pkgz
   end
 
   def self.find_and_install(app : String, sources : Array(Source))
-    puts "🔍 Searching for '#{app}' in sources..."
-
     available_sources = sources.select { |s| s.available?(app) }
 
-    if available_sources.empty?
-      puts "❌ App '#{app}' not found in any source."
-      return
-    end
-
-    if available_sources.size == 1
+    case available_sources.size
+    when 0
+      puts "❌ Could not find '#{app}' in any enabled source."
+    when 1
       source = available_sources.first
-      puts "✅ Found '#{app}' in #{source.name}. Installing..."
+      puts "🚀 Installing '#{app}' with #{source.name}..."
       source.install(app)
-      return
-    end
-
-    puts "📦 Found '#{app}' in multiple sources:"
-    available_sources.each_with_index do |source, i|
-      puts "#{i + 1}. #{source.name}"
-    end
-
-    print "Which one would you like to use? [1-#{available_sources.size}]: "
-    choice = gets.try(&.to_i) || 0
-    selected = available_sources[choice - 1]?
-
-    if selected
-      puts "🚀 Installing with #{selected.name}..."
-      selected.install(app)
     else
-      puts "❌ Invalid choice."
-    end
-  end
-end
+      puts "📦 Found '#{app}' in multiple sources:"
+      available_sources.each_with_index do |source, i|
+        puts "#{i + 1}. #{source.name}"
+      end
 
-# CLI Entry Point
-if ARGV.size < 1
-  puts "Usage: pkgz <install|remove|update|search|--version> [app-name]"
-  exit
-end
+      print "Which one would you like to use? [1-#{available_sources.size}]: "
+      choice = gets.try(&.to_i) || 0
+      selected = available_sources[choice - 1]?
 
-command = ARGV[0]
-app_name = ARGV[1]?
-
-
-if command == "--version"
-  puts "pkgz version #{Pkgz::VERSION}"
-  exit
-end
-
-enabled_sources = Pkgz.load_config
-sources = [] of Pkgz::Source
-
-# Linux Sources
-sources << Pkgz::AptSource.new       if enabled_sources["apt"]?
-sources << Pkgz::NalaSource.new      if enabled_sources["nala"]?
-sources << Pkgz::FlatpakSource.new   if enabled_sources["flatpak"]?
-sources << Pkgz::PacmanSource.new    if enabled_sources["pacman"]?
-sources << Pkgz::ParuSource.new      if enabled_sources["paru"]?
-sources << Pkgz::DnfSource.new       if enabled_sources["dnf"]?
-sources << Pkgz::PacstallSource.new  if enabled_sources["pacstall"]?
-
-# BSD Sources
-sources << Pkgz::FreeBsdSource.new      if enabled_sources["freebsd"]?
-sources << Pkgz::FreeBsdPortsSource.new if enabled_sources["freebsd_ports"]?
-sources << Pkgz::OpenBsdSource.new      if enabled_sources["openbsd"]?
-sources << Pkgz::OpenBsdPortsSource.new if enabled_sources["openbsd_ports"]?
-
-case command
-when "install"
-  if app_name
-    Pkgz.find_and_install(app_name, sources)
-  else
-    puts "Usage: pkgz install <app-name>"
-  end
-when "remove"
-  if app_name
-    sources.each do |source|
-      puts "❌ Trying to remove '#{app_name}' from #{source.name}..."
-      source.remove(app_name)
-    end
-  else
-    puts "Usage: pkgz remove <app-name>"
-  end
-when "update"
-  sources.each do |source|
-    puts "⬆️  Updating #{source.name} packages..."
-    source.update
-  end
-when "search"
-  if app_name
-    puts "🔍 Searching for '#{app_name}' across enabled sources..."
-    any_found = false
-
-    sources.each do |source|
-      if source.search(app_name)
-        puts "✅ Found in #{source.name}"
-        any_found = true
+      if selected
+        puts "🚀 Installing with #{selected.name}..."
+        selected.install(app)
       else
-        puts "❌ Not found in #{source.name}"
+        puts "❌ Invalid choice."
       end
     end
-
-    puts "📦 Package '#{app_name}' not found in any enabled source." unless any_found
-  else
-    puts "Usage: pkgz search <app-name>"
   end
-else
-  puts "Unknown command: #{command}"
-  puts "Usage: pkgz <install|remove|update|search|--version> [app-name]"
+
+  # CLI Entry Point
+  if ARGV.size < 1
+    puts "Usage: pkgz <install|remove|update|search|--version> [app-name]"
+    exit
+  end
+
+  command = ARGV[0]
+  app_name = ARGV[1]?
+
+  if command == "--version"
+    puts "pkgz version #{Pkgz::VERSION}"
+    exit
+  end
+
+  enabled_sources = Pkgz.load_config
+  sources = [] of Pkgz::Source
+
+  # Linux Sources
+  sources << Pkgz::AptSource.new if enabled_sources["apt"]?
+  sources << Pkgz::NalaSource.new if enabled_sources["nala"]?
+  sources << Pkgz::FlatpakSource.new if enabled_sources["flatpak"]?
+  sources << Pkgz::PacmanSource.new if enabled_sources["pacman"]?
+  sources << Pkgz::ParuSource.new if enabled_sources["paru"]?
+  sources << Pkgz::DnfSource.new if enabled_sources["dnf"]?
+  sources << Pkgz::PacstallSource.new if enabled_sources["pacstall"]?
+
+  # BSD Sources
+  sources << Pkgz::FreeBsdSource.new if enabled_sources["freebsd"]?
+  sources << Pkgz::FreeBsdPortsSource.new if enabled_sources["freebsd_ports"]?
+  sources << Pkgz::OpenBsdSource.new if enabled_sources["openbsd"]?
+  sources << Pkgz::OpenBsdPortsSource.new if enabled_sources["openbsd_ports"]?
+
+  case command
+  when "install"
+    if app_name
+      Pkgz.find_and_install(app_name, sources)
+    else
+      puts "Usage: pkgz install <app-name>"
+    end
+  when "remove"
+    if app_name
+      removed_from = [] of String
+
+      sources.each do |source|
+        if source.available?(app_name)
+          puts "🗑️ Removing '#{app_name}' from #{source.name}..."
+          source.remove(app_name)
+          removed_from << source.name
+        end
+      end
+
+      if removed_from.empty?
+        puts "❌ '#{app_name}' was not found in any enabled source."
+      end
+    else
+      puts "Usage: pkgz remove <app-name>"
+    end
+  when "update"
+    sources.each do |source|
+      puts "⬆️  Updating #{source.name} packages..."
+      source.update
+    end
+  when "search"
+    if app_name
+      puts "🔍 Searching for '#{app_name}' across enabled sources..."
+      any_found = false
+
+      sources.each do |source|
+        if source.search(app_name)
+          puts "✅ Found in #{source.name}"
+          any_found = true
+        else
+          puts "❌ Not found in #{source.name}"
+        end
+      end
+
+      puts "📦 Package '#{app_name}' not found in any enabled source." unless any_found
+    else
+      puts "Usage: pkgz search <app-name>"
+    end
+  else
+    puts "Unknown command: #{command}"
+    puts "Usage: pkgz <install|remove|update|search|--version> [app-name]"
+  end
 end

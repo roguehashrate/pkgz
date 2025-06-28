@@ -217,8 +217,6 @@ sudo apt install tldr
 # Arch Linux
 sudo pacman -S tldr
 
-# macOS
-brew install tldr
 ```
 
 #### 📖 Then run:

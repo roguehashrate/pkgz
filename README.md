@@ -152,7 +152,7 @@ sudo chmod +x /usr/local/bin/pkgz
 
 ```bash
 wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.4/pkgz-0.1.4-x86_64.tar.gz
-tar -xvf pkgz-0.1.4-x86_64.tar.xz
+tar -xvf pkgz-0.1.4-x86_64.tar.gz
 sudo cp pkgz-0.1.4/usr/bin/pkgz /usr/bin/
 ```
 

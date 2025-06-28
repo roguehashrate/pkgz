@@ -8,6 +8,18 @@
 
 ---
 
+## 📚 Table of Contents
+- [Features](#-features)
+- [Requirements](#-requirements)
+- [Configuration](#-configuration)
+- [Installation](#-installation)
+- [Usage](#-usage)
+- [Privilege Elevation](#-privilege-elevation)
+- [Extending Pkgz](#-extending-pkgz)
+- [License](#-license)
+
+---
+
 ## ✨ Features
 
 - ✅ Install, remove, update and search apps  

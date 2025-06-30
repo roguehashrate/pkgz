@@ -1,4 +1,5 @@
 require "toml"
+require "./source"
 
 module Pkgz
   VERSION     = "0.1.4"
@@ -417,6 +418,7 @@ module Pkgz
   sources << Pkgz::ParuSource.new if enabled_sources["paru"]?
   sources << Pkgz::DnfSource.new if enabled_sources["dnf"]?
   sources << Pkgz::PacstallSource.new if enabled_sources["pacstall"]?
+  sources << Pkgz::PkgzFileSource.new if enabled_sources["pkgzfile"]?
 
   # BSD Sources
   sources << Pkgz::FreeBsdSource.new if enabled_sources["freebsd"]?

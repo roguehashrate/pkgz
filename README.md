@@ -2,21 +2,7 @@
   <img src="/assets/pkgz-logo.png" alt="Pkgz Logo" width="400"/>
 </p>
 
-[![tldr-pages](https://img.shields.io/badge/tldr-included-blue?logo=readthedocs&style=flat-square)](https://github.com/tldr-pages/tldr/blob/main/pages/common/pkgz.md)
-
 **Pkgz** is a fast, extensible CLI tool written in Crystal 💎 for managing software packages across multiple Linux distributions.
-
----
-
-## 📚 Table of Contents
-- [Features](#-features)
-- [Requirements](#-requirements)
-- [Configuration](#-configuration)
-- [Installation](#-installation)
-- [Usage](#-usage)
-- [Privilege Elevation](#-privilege-elevation)
-- [Extending Pkgz](#-extending-pkgz)
-- [License](#-license)
 
 ---
 
@@ -44,21 +30,14 @@
 To use **pkgz**, you’ll need the following:
 
 - **Privilege elevation:**  
-  Either `sudo` or `doas` must be installed and properly configured on your system.
+  Either `sudo` or `doas` must be installed
 
 - **At least one supported package manager:**  
-  One or more of the following package managers must be installed and enabled in your config:
-  - `apt` or `nala` (Debian/Ubuntu)
-  - `pacman` or `paru` (Arch Linux / AUR)
-  - `dnf` (Fedora/RHEL)
-  - `flatpak`
-  - `pacstall`
-  - `pkg` or FreeBSD Ports (FreeBSD)
-  - `pkg_add` or OpenBSD Ports (OpenBSD)
+  `apt`, `nala`, `pacman`, `paru`, `dnf`, or `pacstall`
 
 - **Crystal compiler:**  
-  Only required if you are building **pkgz** from source.  
-  Prebuilt binaries are provided and do not require Crystal to be installed.
+  Only needed if you're building from source  
+  (Prebuilt binaries don’t require Crystal)
 
 ---
 
@@ -152,7 +131,7 @@ sudo chmod +x /usr/local/bin/pkgz
 
 ```bash
 wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.4/pkgz-0.1.4-x86_64.tar.gz
-tar -xvf pkgz-0.1.4-x86_64.tar.gz
+tar -xvf pkgz-0.1.4-x86_64.tar.xz
 sudo cp pkgz-0.1.4/usr/bin/pkgz /usr/bin/
 ```
 
@@ -213,31 +192,6 @@ $ pkgz install gimp
 Which one would you like to use? [1-2]: 2
 🚀 Installing with Flatpak...
 ```
-
----
-
-### 🆘 Need Help Using `pkgz`?
-
-If you're ever unsure how to use `pkgz` or want a quick refresher on commands, the easiest way to get help is through the [`tldr`](https://tldr.sh) tool:
-
-#### 📥 Install `tldr`:
-
-```bash
-# Debian/Ubuntu
-sudo apt install tldr
-
-# Arch Linux
-sudo pacman -S tldr
-
-```
-
-#### 📖 Then run:
-
-```bash
-tldr pkgz
-```
-
-This will show a concise, community-maintained usage guide for `pkgz` directly in your terminal — no need to scroll through docs or flags.
 
 ---
 

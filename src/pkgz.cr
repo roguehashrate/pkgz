@@ -251,6 +251,32 @@ module Pkgz
     end
   end
 
+  class ApkSource < Source
+    def name : String
+      "Alpine"
+    end
+
+    def available?(app : String) : Bool
+      `apk search #{app}`.includes?(app)
+    end
+
+    def install(app : String) : Nil
+      Pkgz.privileged("apk add #{app}")
+    end
+
+    def remove(app : String) : Nil
+      Pkgz.privileged("apk del #{app}")
+    end
+
+    def update : Nil
+      Pkgz.privileged("apk update && apk upgrade")
+    end
+
+    def search(app : String) : Bool
+      `apk search #{app}`.downcase.includes?(app.downcase)
+    end
+  end
+
   class FreeBsdSource < Source
     def name : String
       "FreeBSD"
@@ -419,6 +445,7 @@ sources << Pkgz::FlatpakSource.new   if enabled_sources["flatpak"]?
 sources << Pkgz::PacmanSource.new    if enabled_sources["pacman"]?
 sources << Pkgz::ParuSource.new      if enabled_sources["paru"]?
 sources << Pkgz::DnfSource.new       if enabled_sources["dnf"]?
+sources << Pkgz::ApkSource.new       if enabled_sources["alpine"]?
 sources << Pkgz::PacstallSource.new  if enabled_sources["pacstall"]?
 
 # BSD Sources

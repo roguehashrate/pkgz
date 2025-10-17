@@ -219,6 +219,6 @@ To add support for a new package manager:
 
 ## 🪪 License
 
-MIT License
+RPL License
 
 Created by [roguehashrate](https://github.com/roguehashrate)

@@ -35,6 +35,7 @@ To use **pkgz**, you’ll need the following:
 - **At least one supported package manager:**  
   Linux: `apt`, `nala`, `flatpak`, `pacman`, `paru`, `dnf`, `apk`, or `pacstall`  
   BSD: `FreeBSD pkg`, `FreeBSD Ports`, `OpenBSD pkg`, `OpenBSD Ports`
+  (More to come)
 
 - **Crystal compiler:**  
   Only needed if you're building from source.  

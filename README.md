@@ -121,16 +121,16 @@ sudo chmod +x /usr/local/bin/pkgz
 ### Tarball (for Arch and others)
 
 ```bash
-wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.4/pkgz-0.1.4-x86_64.tar.gz
-tar -xvf pkgz-0.1.4-x86_64.tar.xz
-sudo cp pkgz-0.1.4/usr/bin/pkgz /usr/bin/
+wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.5/pkgz-0.1.5-x86_64.tar.gz
+tar -xvf pkgz-0.1.5-x86_64.tar.xz
+sudo cp pkgz-0.1.5/usr/bin/pkgz /usr/bin/
 ```
 
 Or install locally:
 
 ```bash
 mkdir -p ~/.local/bin
-cp pkgz-0.1.4/usr/bin/pkgz ~/.local/bin/
+cp pkgz-0.1.5/usr/bin/pkgz ~/.local/bin/
 ```
 
 Make sure `~/.local/bin` is in your PATH.

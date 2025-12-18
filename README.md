@@ -4,6 +4,9 @@
 
 **Pkgz** is a fast, extensible CLI tool written in Crystal 💎 for managing software packages across multiple Linux distributions.
 
+[![License: RPL-v2](https://img.shields.io/badge/RPL-v2?style=flat&label=License&labelColor=ec8f1d&color=ffffff)](/LICENSE)
+
+
 ---
 
 ## ✨ Features
@@ -189,9 +192,5 @@ To add support for a new package manager:
 3. Add your source to the enabled sources list and config.
 
 ---
-
-## 🪪 License
-
-RPLv2 [link](https://rpl.roguehashrate.com)
 
 Created by [roguehashrate](https://github.com/roguehashrate)

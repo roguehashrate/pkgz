@@ -1,8 +1,8 @@
 name: pkgz
-version: 0.1.4
+version: 0.1.5
 
 authors:
-  - roguehashrate <roguehashrate@gmail.com>
+  - roguehashrate <roguehashrate@duck.com>
 
 targets:
   pkgz:

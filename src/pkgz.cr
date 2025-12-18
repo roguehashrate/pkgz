@@ -1,7 +1,7 @@
 require "toml"
 
 module Pkgz
-  VERSION = "0.1.4"
+  VERSION = "0.1.5"
   CONFIG_PATH = "#{ENV["HOME"]}/.config/pkgz/config.toml"
   @@elevator : String? = nil
 
@@ -493,7 +493,41 @@ when "search"
   else
     puts "Usage: pkgz search <app-name>"
   end
+when "clean"
+  sources.each do |source|
+    case source
+    when Pkgz::AptSource
+      puts "🧹 Cleaning Apt cache..."
+      Pkgz.privileged("apt clean")
+    when Pkgz::NalaSource
+      puts "🧹 Cleaning Apt cache with Nala..."
+      Pkgz.privileged("nala clean")
+    when Pkgz::PacmanSource
+      puts "🧹 Cleaning Pacman cache..."
+      Pkgz.privileged("pacman -Sc --noconfirm")
+    when Pkgz::ParuSource
+      puts "🧹 Cleaning Paru cache..."
+      Pkgz.privileged("paru -Sc --noconfirm")
+    when Pkgz::DnfSource
+      puts "🧹 Cleaning DNF cache..."
+      Pkgz.privileged("dnf clean all")
+    when Pkgz::FlatpakSource
+      puts "🧹 Cleaning Flatpak cache..."
+      system("flatpak uninstall --unused -y")
+    when Pkgz::ApkSource
+      puts "🧹 Cleaning Alpine cache..."
+      Pkgz.privileged("rm -rf /var/cache/apk/*")
+    when Pkgz::PacstallSource
+      puts "🧹 Cleaning Pacstall cache..."
+      Pkgz.privileged("pacstall -C")
+    when Pkgz::FreeBsdSource, Pkgz::FreeBsdPortsSource,
+         Pkgz::OpenBsdSource, Pkgz::OpenBsdPortsSource
+      puts "⚠️  No automatic clean command available for #{source.name}."
+    else
+      puts "⚠️  Unknown source #{source.name}, skipping clean."
+    end
+  end
 else
   puts "Unknown command: #{command}"
-  puts "Usage: pkgz <install|remove|update|search|--version> [app-name]"
+  puts "Usage: pkgz <install|remove|update|search|clean|--version> [app-name]"
 end

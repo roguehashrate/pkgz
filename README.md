@@ -30,14 +30,15 @@
 To use **pkgz**, you’ll need the following:
 
 - **Privilege elevation:**  
-  Either `sudo` or `doas` must be installed
+  Either `sudo` or `doas` must be installed.
 
 - **At least one supported package manager:**  
-  `apt`, `nala`, `pacman`, `paru`, `dnf`, or `pacstall`
+  Linux: `apt`, `nala`, `flatpak`, `pacman`, `paru`, `dnf`, `apk`, or `pacstall`  
+  BSD: `FreeBSD pkg`, `FreeBSD Ports`, `OpenBSD pkg`, `OpenBSD Ports`
 
 - **Crystal compiler:**  
-  Only needed if you're building from source  
-  (Prebuilt binaries don’t require Crystal)
+  Only needed if you're building from source.  
+  (Prebuilt binaries don’t require Crystal.)
 
 ---
 
@@ -87,8 +88,8 @@ Make sure `~/.local/bin` is in your `$PATH`.
 To verify the integrity of the binary:
 
 ```bash
-curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.4/pkgz
-curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.4/pkgz.sha256
+curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.5/pkgz
+curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.5/pkgz.sha256
 
 sha256sum -c pkgz.sha256
 ```
@@ -102,16 +103,6 @@ git clone https://github.com/roguehashrate/pkgz
 cd pkgz
 crystal build src/pkgz.cr --release -o pkgz
 sudo mv pkgz /usr/local/bin/
-```
-
----
-
-### Debian `.deb` Package
-
-```bash
-wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.4/pkgz-0.1.4.deb
-sudo dpkg -i pkgz-0.1.4.deb
-sudo apt-get install -f  # Fix dependencies if needed
 ```
 
 ---
@@ -146,30 +137,10 @@ Make sure `~/.local/bin` is in your PATH.
 
 ---
 
-## 📦 Pacstall Support & Local Installation
-
-`pkgz` supports installing packages via **Pacstall**, a universal package manager for Linux.
-
-1. Ensure **Pacstall** is installed on your system. For installation instructions, visit https://pacstall.dev/
-
-2. Install the local `.pacstall` package file using:
-
-```bash
-pacstall -I /path/to/pkgz.pacstall
-```
-
-This will install `pkgz` without needing to publish the package remotely.
-
-Afterward, you can use `pkgz` as usual to manage software packages across supported sources.
-
-The pacstall file will likely always be ahead of the pacstall repos.
-
----
-
 ## 🚀 Usage
 
 ```bash
-pkgz <install|remove|update|search|--version> [app-name]
+pkgz <install|remove|update|search|clean|--version> [app-name]
 ```
 
 Examples:
@@ -219,6 +190,6 @@ To add support for a new package manager:
 
 ## 🪪 License
 
-RPL License
+RPLv2 [link](https://rpl.roguehashrate.com)
 
 Created by [roguehashrate](https://github.com/roguehashrate)

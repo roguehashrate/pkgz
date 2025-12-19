@@ -199,6 +199,32 @@ module Pkgz
     end
   end
 
+  class YaySource < Source
+    def name : String
+      "Yay (AUR)"
+    end
+
+    def available?(app : String) : Bool
+      `yay -Ss #{app}`.includes?(app)
+    end
+
+    def install(app : String) : Nil
+      Pkgz.privileged("yay -S --noconfirm #{app}")
+    end
+
+    def remove(app : String) : Nil
+      Pkgz.privileged("yay -R --noconfirm #{app}")
+    end
+
+    def update : Nil
+      Pkgz.privileged("yay -Syu --noconfirm")
+    end
+
+    def search(app : String) : Bool
+      `yay -Ss #{app}`.downcase.includes?(app.downcase)
+    end
+  end
+
   class DnfSource < Source
     def name : String
       "DNF"
@@ -274,6 +300,58 @@ module Pkgz
 
     def search(app : String) : Bool
       `apk search #{app}`.downcase.includes?(app.downcase)
+    end
+  end
+
+  class ZypperSource < Source
+    def name : String
+      "Zypper"
+    end
+
+    def available?(app : String) : Bool
+      `zypper search #{app}`.includes?(app)
+    end
+
+    def install(app : String) : Nil
+      Pkgz.privileged("zypper install -y #{app}")
+    end
+
+    def remove(app : String) : Nil
+      Pkgz.privileged("zypper remove -y #{app}")
+    end
+
+    def update : Nil
+      Pkgz.privileged("zypper refresh && zypper update -y")
+    end
+
+    def search(app : String) : Bool
+      `zypper search #{app}`.downcase.includes?(app.downcase)
+    end
+  end
+
+  class XbpsSource < Source
+    def name : String
+      "XBPS"
+    end
+
+    def available?(app : String) : Bool
+      `xbps-query -Rs #{app}`.includes?(app)
+    end
+
+    def install(app : String) : Nil
+      Pkgz.privileged("xbps-install -Sy #{app}")
+    end
+
+    def remove(app : String) : Nil
+      Pkgz.privileged("xbps-remove -Ry #{app}")
+    end
+
+    def update : Nil
+      Pkgz.privileged("xbps-install -Syu")
+    end
+
+    def search(app : String) : Bool
+      `xbps-query -Rs #{app}`.downcase.includes?(app.downcase)
     end
   end
 
@@ -444,7 +522,10 @@ sources << Pkgz::NalaSource.new      if enabled_sources["nala"]?
 sources << Pkgz::FlatpakSource.new   if enabled_sources["flatpak"]?
 sources << Pkgz::PacmanSource.new    if enabled_sources["pacman"]?
 sources << Pkgz::ParuSource.new      if enabled_sources["paru"]?
+sources << Pkgz::YaySource.new       if enabled_sources["yay"]?
 sources << Pkgz::DnfSource.new       if enabled_sources["dnf"]?
+sources << Pkgz::ZypperSource.new    if enabled_sources["zypper"]?
+sources << Pkgz::XbpsSource.new      if enabled_sources["xbps"]?
 sources << Pkgz::ApkSource.new       if enabled_sources["alpine"]?
 sources << Pkgz::PacstallSource.new  if enabled_sources["pacstall"]?
 
@@ -508,6 +589,9 @@ when "clean"
     when Pkgz::ParuSource
       puts "🧹 Cleaning Paru cache..."
       Pkgz.privileged("paru -Sc --noconfirm")
+    when Pkgz::YaySource
+      puts "🧹 Cleaning Paru cache..."
+      Pkgz.privileged("yay -Sc --noconfirm")
     when Pkgz::DnfSource
       puts "🧹 Cleaning DNF cache..."
       Pkgz.privileged("dnf clean all")
@@ -517,6 +601,12 @@ when "clean"
     when Pkgz::ApkSource
       puts "🧹 Cleaning Alpine cache..."
       Pkgz.privileged("rm -rf /var/cache/apk/*")
+    when Pkgz::XbpsSource
+      puts "🧹 Cleaning XBPS cache..."
+      Pgkz.privileged("xbps-remove -O")
+    when Pkgz::ZypperSource
+      puts "🧹 Cleaning Zypper cache..."
+      Pkgz.privileged("zypper clean --all")
     when Pkgz::PacstallSource
       puts "🧹 Cleaning Pacstall cache..."
       Pkgz.privileged("pacstall -C")

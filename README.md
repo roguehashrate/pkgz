@@ -20,7 +20,10 @@
   - Pacman (Arch)
   - Paru (AUR helper)
   - DNF (Fedora/RHEL)
+  - APK (Alpine)
   - Pacstall
+  - Zypper (openSUSE)
+  - XBPS (Void)
   - FreeBSD & FreeBSD Ports
   - OpenBSD & OpenBSD Ports
 - ⚙️ Configurable via `~/.config/pkgz/config.toml`  
@@ -36,10 +39,8 @@ To use **pkgz**, you’ll need the following:
   Either `sudo` or `doas` must be installed.
 
 - **At least one supported package manager:**  
-  Linux: `apt`, `nala`, `flatpak`, `pacman`, `paru`, `dnf`, `apk`, or `pacstall`  
+  Linux: `apt`, `nala`, `flatpak`, `pacman`, `paru`, `yay`, `dnf`, `zypper`, `apk`, `xbps`, or `pacstall`  
   BSD: `FreeBSD pkg`, `FreeBSD Ports`, `OpenBSD pkg`, `OpenBSD Ports`
-  
-  (More to come)
 
 - **Crystal compiler:**  
   Only needed if you're building from source.  
@@ -57,9 +58,12 @@ apt = true
 nala = false
 flatpak = true
 paru = false
+yay = false
 pacman = false
 dnf = false
 pacstall = true
+zypper = false
+xbps = false
 freebsd = false
 freebsd_ports = false
 openbsd = false
@@ -93,8 +97,8 @@ Make sure `~/.local/bin` is in your `$PATH`.
 To verify the integrity of the binary:
 
 ```bash
-curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.5/pkgz
-curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.5/pkgz.sha256
+curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.6/pkgz
+curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.6/pkgz.sha256
 
 sha256sum -c pkgz.sha256
 ```
@@ -126,16 +130,14 @@ sudo chmod +x /usr/local/bin/pkgz
 ### Tarball (for Arch and others)
 
 ```bash
-wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.5/pkgz-0.1.5-x86_64.tar.gz
-tar -xvf pkgz-0.1.5-x86_64.tar.xz
-sudo cp pkgz-0.1.5/usr/bin/pkgz /usr/bin/
-```
+wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.6/pkgz-0.1.6.tar.gz
+wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.6/pkgz-0.1.6.tar.gz.sha256
 
-Or install locally:
-
-```bash
-mkdir -p ~/.local/bin
-cp pkgz-0.1.5/usr/bin/pkgz ~/.local/bin/
+sha256sum -c pkgz-0.1.6.tar.gz.sha256
+tar -xvf pkgz-0.1.6.tar.gz
+cd pkgz-0.1.6
+chmod +x install.sh
+./install.sh
 ```
 
 Make sure `~/.local/bin` is in your PATH.
@@ -153,6 +155,7 @@ Examples:
 ```bash
 pkgz install gimp
 pkgz remove neofetch
+pkgz clean
 pkgz update
 pkgz --version
 ```
@@ -188,7 +191,8 @@ To add support for a new package manager:
    - `available?(app)`  
    - `install(app)`  
    - `remove(app)`  
-   - `update`  
+   - `update`
+   - `search(app)`
 3. Add your source to the enabled sources list and config.
 
 ---

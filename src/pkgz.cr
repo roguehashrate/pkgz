@@ -603,7 +603,7 @@ when "clean"
       Pkgz.privileged("rm -rf /var/cache/apk/*")
     when Pkgz::XbpsSource
       puts "🧹 Cleaning XBPS cache..."
-      Pgkz.privileged("xbps-remove -O")
+      Pkgz.privileged("xbps-remove -O")
     when Pkgz::ZypperSource
       puts "🧹 Cleaning Zypper cache..."
       Pkgz.privileged("zypper clean --all")

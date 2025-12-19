@@ -135,7 +135,7 @@ wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.6/pkgz-0.1.6.t
 
 sha256sum -c pkgz-0.1.6.tar.gz.sha256
 tar -xvf pkgz-0.1.6.tar.gz
-cd pkgz-0.1.6
+cd pkgz
 chmod +x install.sh
 ./install.sh
 ```

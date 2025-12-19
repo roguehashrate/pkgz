@@ -1,7 +1,7 @@
 require "toml"
 
 module Pkgz
-  VERSION = "0.1.5"
+  VERSION = "0.1.6"
   CONFIG_PATH = "#{ENV["HOME"]}/.config/pkgz/config.toml"
   @@elevator : String? = nil
 

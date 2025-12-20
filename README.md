@@ -111,7 +111,7 @@ sha256sum -c pkgz.sha256
 git clone https://github.com/roguehashrate/pkgz
 cd pkgz
 crystal build src/pkgz.cr --release -o pkgz
-sudo mv pkgz /usr/local/bin/
+mv pkgz ~/.local/bin/
 ```
 
 ---
@@ -121,8 +121,8 @@ sudo mv pkgz /usr/local/bin/
 Download from [Releases](https://github.com/roguehashrate/pkgz/releases):
 
 ```bash
-sudo mv pkgz /usr/local/bin/
-sudo chmod +x /usr/local/bin/pkgz
+mv pkgz ~/.local/bin
+chmod +x ~/.local/bin/pkgz
 ```
 
 ---

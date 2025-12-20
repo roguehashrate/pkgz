@@ -260,7 +260,7 @@ module Pkgz
     end
 
     def installed?(app : String) : Bool
-      system("dnf list installed #{app} > /dev/null 2>&1")
+      system("rpm -q #{app} > /dev/null 2>&1")
     end
 
     def install(app : String) : Nil
@@ -605,20 +605,29 @@ when "install"
   end
 when "remove"
   if app_name
-    puts "🔍 Checking where '#{app_name}' is installed..."
-    removed = false
+    installed_sources = sources.select { |s| s.installed?(app_name) }
 
-    sources.each do |source|
-      if source.installed?(app_name)
-        puts "🗑️  Removing '#{app_name}' from #{source.name}..."
-        source.remove(app_name)
-        removed = true
-        break
-      end
-    end
-
-    unless removed
+    if installed_sources.empty?
       puts "❌ '#{app_name}' is not installed in any enabled source."
+    elsif installed_sources.size == 1
+      source = installed_sources.first
+      puts "🗑️ Removing '#{app_name}' from #{source.name}..."
+      source.remove(app_name)
+    else
+      puts "⚠️ '#{app_name}' is installed in multiple sources:"
+      installed_sources.each_with_index do |source, i|
+        puts "#{i + 1}. #{source.name}"
+      end
+      print "Which one would you like to remove? [1-#{installed_sources.size}]: "
+      choice = gets.try(&.to_i) || 0
+      selected = installed_sources[choice - 1]?
+
+      if selected
+        puts "🗑️ Removing '#{app_name}' from #{selected.name}..."
+        selected.remove(app_name)
+      else
+        puts "❌ Invalid choice."
+      end
     end
   else
     puts "Usage: pkgz remove <app-name>"
@@ -645,6 +654,38 @@ when "search"
     puts "📦 Package '#{app_name}' not found in any enabled source." unless any_found
   else
     puts "Usage: pkgz search <app-name>"
+  end
+  when "info"
+  if app_name
+    puts "ℹ️  Info for '#{app_name}':"
+    puts
+
+    found_any = false
+
+    sources.each do |source|
+      installed = source.installed?(app_name)
+      available = source.available?(app_name)
+
+      status =
+        if installed
+          "✔ INSTALLED"
+        elsif available
+          "○ AVAILABLE"
+        else
+          "✖ NOT FOUND"
+        end
+
+      puts "  #{status.ljust(13)} #{source.name}"
+
+      found_any ||= installed || available
+    end
+
+    unless found_any
+      puts
+      puts "❌ '#{app_name}' was not found in any enabled source."
+    end
+  else
+    puts "Usage: pkgz info <app-name>"
   end
 when "clean"
   sources.each do |source|

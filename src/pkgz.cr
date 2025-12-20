@@ -63,6 +63,7 @@ module Pkgz
   abstract class Source
     abstract def name : String
     abstract def available?(app : String) : Bool
+    abstract def installed?(app : String) : Bool
     abstract def install(app : String) : Nil
     abstract def remove(app : String) : Nil
     abstract def update : Nil
@@ -76,6 +77,10 @@ module Pkgz
 
     def available?(app : String) : Bool
       `apt-cache search #{app}`.includes?(app)
+    end
+
+    def installed?(app : String) : Bool
+      system("dpkg -s #{app} > /dev/null 2>&1")
     end
 
     def install(app : String) : Nil
@@ -104,6 +109,10 @@ module Pkgz
       `nala search #{app}`.includes?(app)
     end
 
+    def installed?(app : String) : Bool
+      system("dpkg -s #{app} > /dev/null 2>&1")
+    end
+
     def install(app : String) : Nil
       Pkgz.privileged("nala install -y #{app}")
     end
@@ -128,6 +137,10 @@ module Pkgz
 
     def available?(app : String) : Bool
       `flatpak search #{app}`.includes?(app)
+    end
+
+    def installed?(app : String) : Bool
+      `flatpak list`.downcase.includes?(app.downcase)
     end
 
     def install(app : String) : Nil
@@ -156,6 +169,10 @@ module Pkgz
       `pacman -Ss #{app}`.includes?(app)
     end
 
+    def installed?(app : String) : Bool
+      system("pacman -Qi #{app} /dev/null 2>&1")
+    end
+
     def install(app : String) : Nil
       Pkgz.privileged("pacman -S --noconfirm #{app}")
     end
@@ -180,6 +197,10 @@ module Pkgz
 
     def available?(app : String) : Bool
       `paru -Ss #{app}`.includes?(app)
+    end
+
+    def installed?(app : String) : Bool
+      system("pacman -Qi #{app} > /dev/null 2>&1")
     end
 
     def install(app : String) : Nil
@@ -208,6 +229,10 @@ module Pkgz
       `yay -Ss #{app}`.includes?(app)
     end
 
+    def installed?(app : String) : Bool
+      system("pacman -Qi #{app} > /dev/null 2>&1")
+    end
+
     def install(app : String) : Nil
       Pkgz.privileged("yay -S --noconfirm #{app}")
     end
@@ -232,6 +257,10 @@ module Pkgz
 
     def available?(app : String) : Bool
       `dnf search #{app}`.includes?(app)
+    end
+
+    def installed?(app : String) : Bool
+      system("dnf list installed #{app} > /dev/null 2>&1")
     end
 
     def install(app : String) : Nil
@@ -260,6 +289,10 @@ module Pkgz
       `pacstall -S #{app}`.includes?(app)
     end
 
+    def installed?(app : String) : Bool
+      system("pacstall -L | grep -q \"^#{app}$\"")
+    end
+
     def install(app : String) : Nil
       Pkgz.privileged("pacstall -I #{app}")
     end
@@ -284,6 +317,10 @@ module Pkgz
 
     def available?(app : String) : Bool
       `apk search #{app}`.includes?(app)
+    end
+
+    def installed?(app : String) : Bool
+      system("apk info -e #{app} > /dev/null 2>&1")
     end
 
     def install(app : String) : Nil
@@ -312,6 +349,10 @@ module Pkgz
       `zypper search #{app}`.includes?(app)
     end
 
+    def installed?(app : String) : Bool
+      system("rpm -q #{app} > /dev/null 2>&1")
+    end
+
     def install(app : String) : Nil
       Pkgz.privileged("zypper install -y #{app}")
     end
@@ -336,6 +377,10 @@ module Pkgz
 
     def available?(app : String) : Bool
       `xbps-query -Rs #{app}`.includes?(app)
+    end
+
+    def installed?(app : String) : Bool
+      system("xbps-query -p pkgver #{app} > /dev/null 2>&1")
     end
 
     def install(app : String) : Nil
@@ -363,6 +408,10 @@ module Pkgz
     def available?(app : String) : Bool
       result = %x(pkg search #{app})
       result.includes?(app)
+    end
+
+    def installed?(app : String) : Bool
+      system("pkg info #{app} > /dev/null 2>&1")
     end
 
     def install(app : String) : Nil
@@ -393,6 +442,10 @@ module Pkgz
       result.includes?(app)
     end
 
+    def installed?(app : String) : Bool
+      system("pkg_info #{app} > /dev/null 2>&1")
+    end
+
     def install(app : String) : Nil
       Pkgz.privileged("pkg_add #{app}")
     end
@@ -420,6 +473,10 @@ module Pkgz
       result.includes?(app)
     end
 
+    def installed?(app : String) : Bool
+      system("pkg info #{app} > /dev/null 2>&1")
+    end
+
     def install(app : String) : Nil
       Pkgz.privileged("make -C /usr/ports/#{app} install clean BATCH=yes")
     end
@@ -444,6 +501,10 @@ module Pkgz
 
     def available?(app : String) : Bool
       File.directory?("/usr/ports/#{app}")
+    end
+
+    def installed?(app : String) : Bool
+      system("pkg_info #{app} > /dev/null 2>&1")
     end
 
     def install(app : String) : Nil
@@ -544,9 +605,20 @@ when "install"
   end
 when "remove"
   if app_name
+    puts "🔍 Checking where '#{app_name}' is installed..."
+    removed = false
+
     sources.each do |source|
-      puts "❌ Trying to remove '#{app_name}' from #{source.name}..."
-      source.remove(app_name)
+      if source.installed?(app_name)
+        puts "🗑️  Removing '#{app_name}' from #{source.name}..."
+        source.remove(app_name)
+        removed = true
+        break
+      end
+    end
+
+    unless removed
+      puts "❌ '#{app_name}' is not installed in any enabled source."
     end
   else
     puts "Usage: pkgz remove <app-name>"

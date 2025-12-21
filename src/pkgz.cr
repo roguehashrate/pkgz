@@ -732,5 +732,5 @@ when "clean"
   end
 else
   puts "Unknown command: #{command}"
-  puts "Usage: pkgz <install|remove|update|search|clean|--version> [app-name]"
+  puts "Usage: pkgz <install|remove|update|search|clean|info| --version> [app-name]"
 end

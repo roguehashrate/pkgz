@@ -147,7 +147,7 @@ Make sure `~/.local/bin` is in your PATH.
 ## 🚀 Usage
 
 ```bash
-pkgz <install|remove|update|search|clean|--version> [app-name]
+pkgz <install|remove|update|search|clean|info|--version> [app-name]
 ```
 
 Examples:

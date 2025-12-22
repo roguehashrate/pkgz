@@ -19,6 +19,7 @@
   - Flatpak
   - Pacman (Arch)
   - Paru (AUR helper)
+  - Yay (AUR helper)
   - DNF (Fedora/RHEL)
   - APK (Alpine)
   - Pacstall

@@ -100,8 +100,8 @@ Make sure `~/.local/bin` is in your `$PATH`.
 To verify the integrity of the binary:
 
 ```bash
-curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.8/pkgz
-curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.8/pkgz.sha256
+curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.9/pkgz
+curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.9/pkgz.sha256
 
 sha256sum -c pkgz.sha256
 ```
@@ -133,11 +133,11 @@ chmod +x ~/.local/bin/pkgz
 ### Tarball (for Arch and others)
 
 ```bash
-wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.8/pkgz-0.1.8.tar.gz
-wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.8/pkgz-0.1.8.tar.gz.sha256
+wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.9/pkgz-0.1.9.tar.gz
+wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.9/pkgz-0.1.9.tar.gz.sha256
 
-sha256sum -c pkgz-0.1.8.tar.gz.sha256
-tar -xvf pkgz-0.1.8.tar.gz
+sha256sum -c pkgz-0.1.9.tar.gz.sha256
+tar -xvf pkgz-0.1.9.tar.gz
 cd pkgz
 chmod +x install.sh
 ./install.sh

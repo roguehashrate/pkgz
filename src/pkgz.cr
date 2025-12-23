@@ -68,6 +68,7 @@ module Pkgz
     abstract def remove(app : String) : Nil
     abstract def update : Nil
     abstract def search(app : String) : Bool
+    abstract def installed_count : Int32?
   end
 
   class AptSource < Source
@@ -97,6 +98,12 @@ module Pkgz
 
     def search(app : String) : Bool
       `apt-cache search #{app}`.downcase.includes?(app.downcase)
+    end
+
+    def installed_count : Int32?
+      `dpkg-query -f '.\n' -W`.lines.size
+    rescue
+      nil
     end
   end
 
@@ -128,6 +135,12 @@ module Pkgz
     def search(app : String) : Bool
       `nala search #{app}`.downcase.includes?(app.downcase)
     end
+
+    def installed_count : Int32?
+      `dpkg-query -f '.\n' -W`.lines.size
+    rescue
+      nil
+    end
   end
 
   class FlatpakSource < Source
@@ -157,6 +170,12 @@ module Pkgz
 
     def search(app : String) : Bool
       `flatpak search #{app}`.downcase.includes?(app.downcase)
+    end
+
+    def installed_count : Int32?
+      `flatpak list`.lines.size
+    rescue
+      nil
     end
   end
 
@@ -188,6 +207,12 @@ module Pkgz
     def search(app : String) : Bool
       `pacman -Ss #{app}`.downcase.includes?(app.downcase)
     end
+
+    def installed_count : Int32?
+      `pacman -Qq`.lines.size
+    rescue
+      nil
+    end
   end
 
   class ParuSource < Source
@@ -217,6 +242,12 @@ module Pkgz
 
     def search(app : String) : Bool
       `paru -Ss #{app}`.downcase.includes?(app.downcase)
+    end
+
+    def installed_count : Int32?
+      `pacman -Qq`.lines.size
+    rescue
+      nil
     end
   end
 
@@ -248,6 +279,12 @@ module Pkgz
     def search(app : String) : Bool
       `yay -Ss #{app}`.downcase.includes?(app.downcase)
     end
+
+    def installed_count : Int32?
+      `pacman -Qq`.lines.size
+    rescue
+      nil
+    end
   end
 
   class DnfSource < Source
@@ -277,6 +314,12 @@ module Pkgz
 
     def search(app : String) : Bool
       `dnf search #{app}`.downcase.includes?(app.downcase)
+    end
+
+    def installed_count : Int32?
+      `rpm -qa`.lines.size
+    rescue
+      nil
     end
   end
 
@@ -308,6 +351,12 @@ module Pkgz
     def search(app : String) : Bool
       `pacstall -S #{app}`.downcase.includes?(app.downcase)
     end
+
+    def installed_count : Int32?
+      `pacstall -L`.lines.size
+    rescue
+      nil
+    end
   end
 
   class ApkSource < Source
@@ -337,6 +386,12 @@ module Pkgz
 
     def search(app : String) : Bool
       `apk search #{app}`.downcase.includes?(app.downcase)
+    end
+
+    def installed_count : Int32?
+      `apk info`.lines.size
+    rescue
+      nil
     end
   end
 
@@ -368,6 +423,12 @@ module Pkgz
     def search(app : String) : Bool
       `zypper search #{app}`.downcase.includes?(app.downcase)
     end
+
+    def installed_count : Int32?
+      `rpm -qa`.lines.size
+    rescue
+      nil
+    end
   end
 
   class XbpsSource < Source
@@ -397,6 +458,12 @@ module Pkgz
 
     def search(app : String) : Bool
       `xbps-query -Rs #{app}`.downcase.includes?(app.downcase)
+    end
+
+    def installed_count : Int32?
+      `xbps-query -l`.lines.size
+    rescue
+      nil
     end
   end
 
@@ -446,8 +513,13 @@ module Pkgz
     rescue
       false
     end
-  end
 
+    def installed_count : Int32?
+      installed_packages.size
+    rescue
+      nil
+    end
+  end
 
   class FreeBsdSource < Source
     def name : String
@@ -478,6 +550,12 @@ module Pkgz
 
     def search(app : String) : Bool
       available?(app)
+    end
+
+    def installed_count : Int32?
+      `pkg info`.lines.size
+    rescue
+      nil
     end
   end
 
@@ -510,6 +588,12 @@ module Pkgz
     def search(app : String) : Bool
       available?(app)
     end
+
+    def installed_count : Int32?
+      `pkg_info`.lines.size
+    rescue
+      nil
+    end
   end
 
   class FreeBsdPortsSource < Source
@@ -541,6 +625,12 @@ module Pkgz
     def search(app : String) : Bool
       available?(app)
     end
+
+    def installed_count : Int32?
+      `pkg info`.lines.size
+    rescue
+      nil
+    end
   end
 
   class OpenBsdPortsSource < Source
@@ -570,6 +660,12 @@ module Pkgz
 
     def search(app : String) : Bool
       available?(app)
+    end
+
+    def installed_count : Int32?
+      `pkg_info`.lines.size
+    rescue
+      nil
     end
   end
 
@@ -705,8 +801,25 @@ when "search"
   else
     puts "Usage: pkgz search <app-name>"
   end
-  when "info"
-  if app_name
+when "info"
+  if app_name.nil?
+    puts "📦 pkgz info"
+    puts
+
+    sources.each do |source|
+      count = source.installed_count
+
+      if count
+        puts "#{source.name}: #{count}"
+      else
+        puts "#{source.name}: unavailable"
+      end
+    end
+
+  elsif app_name.starts_with?("-")
+    puts "Usage: pkgz info <app-name>"
+
+  else
     puts "ℹ️  Info for '#{app_name}':"
     puts
 
@@ -734,8 +847,6 @@ when "search"
       puts
       puts "❌ '#{app_name}' was not found in any enabled source."
     end
-  else
-    puts "Usage: pkgz info <app-name>"
   end
 when "clean"
   sources.each do |source|

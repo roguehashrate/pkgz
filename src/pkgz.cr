@@ -245,7 +245,7 @@ module Pkgz
     end
 
     def installed_count : Int32?
-      `pacman -Qq`.lines.size
+      `paru -Qm`.lines.size
     rescue
       nil
     end
@@ -281,7 +281,7 @@ module Pkgz
     end
 
     def installed_count : Int32?
-      `pacman -Qq`.lines.size
+      `yay -Qm`.lines.size
     rescue
       nil
     end

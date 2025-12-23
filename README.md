@@ -74,7 +74,9 @@ openbsd_ports = false
 command = "sudo"  # or "doas"
 ```
 
-This controls enabled sources and privilege elevator. If missing, Pkgz will prompt and exit.
+You only need to add the sources you will use and set them to `true`
+
+Also you **Must** have an elevator set, either `sudo` or `doas`
 
 ---
 

@@ -24,9 +24,9 @@
   - APK (Alpine)
   - Pacstall
   - Zypper (openSUSE)
-  - XBPS (Void)
-  - FreeBSD & FreeBSD Ports
-  - OpenBSD & OpenBSD Ports
+  - XBPS (Void) (`Untested`)
+  - FreeBSD & FreeBSD Ports (`Untested`)
+  - OpenBSD & OpenBSD Ports (`Untested`)
 - ⚙️ Configurable via `~/.config/pkgz/config.toml`  
 - 🌱 Extensible to support other package managers  
 

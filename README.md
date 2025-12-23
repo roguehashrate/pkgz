@@ -157,8 +157,9 @@ Examples:
 
 ```bash
 pkgz install gimp
-pkgz remove neofetch
+pkgz remove gimp
 pkgz clean
+pkgz info gimp
 pkgz update
 pkgz --version
 ```

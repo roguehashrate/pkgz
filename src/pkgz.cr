@@ -173,7 +173,7 @@ module Pkgz
     end
 
     def installed_count : Int32?
-      `flatpak list`.lines.size
+      `flatpak list --app`.lines.size
     rescue
       nil
     end

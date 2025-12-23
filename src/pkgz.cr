@@ -189,7 +189,7 @@ module Pkgz
     end
 
     def installed?(app : String) : Bool
-      system("pacman -Qi #{app} /dev/null 2>&1")
+      system("pacman -Qn #{app} > /dev/null 2>&1")
     end
 
     def install(app : String) : Nil
@@ -209,7 +209,7 @@ module Pkgz
     end
 
     def installed_count : Int32?
-      `pacman -Qnq`.lines.size
+      `pacman -Qn`.lines.size
     rescue
       nil
     end
@@ -225,7 +225,7 @@ module Pkgz
     end
 
     def installed?(app : String) : Bool
-      system("pacman -Qi #{app} > /dev/null 2>&1")
+      system("paru -Qm #{app} > /dev/null 2>&1")
     end
 
     def install(app : String) : Nil
@@ -245,7 +245,7 @@ module Pkgz
     end
 
     def installed_count : Int32?
-      `paru -Qmq`.lines.size
+      `paru -Qm`.lines.size
     rescue
       nil
     end
@@ -261,7 +261,7 @@ module Pkgz
     end
 
     def installed?(app : String) : Bool
-      system("pacman -Qi #{app} > /dev/null 2>&1")
+      system("yay -Qm #{app} > /dev/null 2>&1")
     end
 
     def install(app : String) : Nil
@@ -281,7 +281,7 @@ module Pkgz
     end
 
     def installed_count : Int32?
-      `yay -Qmq`.lines.size
+      `yay -Qm`.lines.size
     rescue
       nil
     end

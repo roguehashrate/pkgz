@@ -209,7 +209,7 @@ module Pkgz
     end
 
     def installed_count : Int32?
-      `pacman -Qq`.lines.size
+      `pacman -Qnq`.lines.size
     rescue
       nil
     end
@@ -229,15 +229,15 @@ module Pkgz
     end
 
     def install(app : String) : Nil
-      Pkgz.privileged("paru -S --noconfirm #{app}")
+      system("paru -S --noconfirm #{app}")
     end
 
     def remove(app : String) : Nil
-      Pkgz.privileged("paru -R --noconfirm #{app}")
+      system("paru -R --noconfirm #{app}")
     end
 
     def update : Nil
-      Pkgz.privileged("paru -Syu --noconfirm")
+      system("paru -Syu --noconfirm")
     end
 
     def search(app : String) : Bool
@@ -245,7 +245,7 @@ module Pkgz
     end
 
     def installed_count : Int32?
-      `paru -Qm`.lines.size
+      `paru -Qmq`.lines.size
     rescue
       nil
     end
@@ -265,15 +265,15 @@ module Pkgz
     end
 
     def install(app : String) : Nil
-      Pkgz.privileged("yay -S --noconfirm #{app}")
+      system("yay -S --noconfirm #{app}")
     end
 
     def remove(app : String) : Nil
-      Pkgz.privileged("yay -R --noconfirm #{app}")
+      system("yay -R --noconfirm #{app}")
     end
 
     def update : Nil
-      Pkgz.privileged("yay -Syu --noconfirm")
+      system("yay -Syu --noconfirm")
     end
 
     def search(app : String) : Bool
@@ -281,7 +281,7 @@ module Pkgz
     end
 
     def installed_count : Int32?
-      `yay -Qm`.lines.size
+      `yay -Qmq`.lines.size
     rescue
       nil
     end

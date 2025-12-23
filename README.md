@@ -25,6 +25,7 @@
   - Pacstall
   - Zypper (openSUSE)
   - XBPS (Void) (`Untested`)
+  - Nix (`Untested`)
   - FreeBSD & FreeBSD Ports (`Untested`)
   - OpenBSD & OpenBSD Ports (`Untested`)
 - ⚙️ Configurable via `~/.config/pkgz/config.toml`  
@@ -40,7 +41,7 @@ To use **pkgz**, you’ll need the following:
   Either `sudo` or `doas` must be installed.
 
 - **At least one supported package manager:**  
-  Linux: `apt`, `nala`, `flatpak`, `pacman`, `paru`, `yay`, `dnf`, `zypper`, `apk`, `xbps`, or `pacstall`  
+  Linux: `apt`, `nala`, `flatpak`, `pacman`, `paru`, `yay`, `dnf`, `zypper`, `apk`, `xbps`, `nix`  or `pacstall`  
   BSD: `FreeBSD pkg`, `FreeBSD Ports`, `OpenBSD pkg`, `OpenBSD Ports`
 
 - **Crystal compiler:**  
@@ -65,6 +66,7 @@ dnf = false
 pacstall = true
 zypper = false
 xbps = false
+nix = false
 freebsd = false
 freebsd_ports = false
 openbsd = false

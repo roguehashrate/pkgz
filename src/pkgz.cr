@@ -400,6 +400,55 @@ module Pkgz
     end
   end
 
+  class NixSource < Source
+    def name : String
+      "Nix"
+    end
+
+    def available?(app : String) : Bool
+      `nix search #{app}`.includes?(app)
+    rescue
+      false
+    end
+
+    def installed?(app : String) : Bool
+      installed_packages.includes?(app)
+    rescue
+      false
+    end
+
+    def installed_packages : Array(String)
+      `nix-env -q`.split("\n").map { |line| line.sub(/-\d.*$/, "") }
+    rescue
+      [] of String
+    end
+
+    def install(app : String) : Nil
+      system("nix-env -iA nixpkgs.#{app}")
+    rescue
+      puts "❌ Failed to install #{app} via Nix."
+    end
+
+    def remove(app : String) : Nil
+      system("nix-env -e #{app}")
+    rescue
+      puts "❌ Failed to remove #{app} via Nix."
+    end
+
+    def update : Nil
+      system("nix-env -u '*'")
+    rescue
+      puts "❌ Failed to update Nix packages."
+    end
+
+    def search(app : String) : Bool
+      `nix search #{app}`.downcase.includes?(app.downcase)
+    rescue
+      false
+    end
+  end
+
+
   class FreeBsdSource < Source
     def name : String
       "FreeBSD"
@@ -589,6 +638,7 @@ sources << Pkgz::ZypperSource.new    if enabled_sources["zypper"]?
 sources << Pkgz::XbpsSource.new      if enabled_sources["xbps"]?
 sources << Pkgz::ApkSource.new       if enabled_sources["alpine"]?
 sources << Pkgz::PacstallSource.new  if enabled_sources["pacstall"]?
+sources << Pkgz::NixSource.new       if enabled_sources["nix"]?
 
 # BSD Sources
 sources << Pkgz::FreeBsdSource.new      if enabled_sources["freebsd"]?
@@ -724,7 +774,7 @@ when "clean"
       puts "🧹 Cleaning Pacstall cache..."
       Pkgz.privileged("pacstall -C")
     when Pkgz::FreeBsdSource, Pkgz::FreeBsdPortsSource,
-         Pkgz::OpenBsdSource, Pkgz::OpenBsdPortsSource
+         Pkgz::OpenBsdSource, Pkgz::OpenBsdPortsSource, Pkgz::NixSource
       puts "⚠️  No automatic clean command available for #{source.name}."
     else
       puts "⚠️  Unknown source #{source.name}, skipping clean."

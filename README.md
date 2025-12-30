@@ -24,7 +24,7 @@
   - APK (Alpine)
   - Pacstall
   - Zypper (openSUSE)
-  - XBPS (Void) (`Untested`)
+  - XBPS (Void)
   - Nix (`Untested`)
   - FreeBSD & FreeBSD Ports (`Untested`)
   - OpenBSD & OpenBSD Ports (`Untested`)

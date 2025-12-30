@@ -467,6 +467,55 @@ module Pkgz
     end
   end
 
+  class XbpsSrcSource < Source
+  VOID_PKGS = "/usr/src/void-packages"
+
+  def name : String
+    "XBPS-SRC"
+  end
+
+  def available?(app : String) : Bool
+    File.directory?("#{VOID_PKGS}/srcpkgs/#{app}")
+  end
+
+  def installed?(app : String) : Bool
+    system("xbps-query -p pkgver #{app} > /dev/null 2>&1")
+  end
+
+  def install(app : String) : Nil
+    unless File.directory?(VOID_PKGS)
+      puts "❌ xbps-src not found at #{VOID_PKGS}"
+      puts "Install it with:"
+      puts "  sudo xbps-install -S void-packages"
+      return
+    end
+
+    Pkgz.privileged(
+      "cd #{VOID_PKGS} && ./xbps-src pkg #{app} && xi #{app}"
+    )
+  end
+
+  def remove(app : String) : Nil
+    Pkgz.privileged("xbps-remove -Ry #{app}")
+  end
+
+  def update : Nil
+    puts "⚠️  xbps-src does not support mass updates."
+    puts "Use: pkgz install <pkg> to rebuild when needed."
+  end
+
+  def search(app : String) : Bool
+    Dir.glob("#{VOID_PKGS}/srcpkgs/*")
+       .map { |d| File.basename(d) }
+       .any? { |name| name.downcase.includes?(app.downcase) }
+  end
+
+  def installed_count : Int32?
+    nil
+  end
+end
+
+
   class NixSource < Source
     def name : String
       "Nix"
@@ -732,6 +781,7 @@ sources << Pkgz::YaySource.new       if enabled_sources["yay"]?
 sources << Pkgz::DnfSource.new       if enabled_sources["dnf"]?
 sources << Pkgz::ZypperSource.new    if enabled_sources["zypper"]?
 sources << Pkgz::XbpsSource.new      if enabled_sources["xbps"]?
+sources << Pkgz::XbpsSrcSource.new   if enabled_sources["xbps_src"]?
 sources << Pkgz::ApkSource.new       if enabled_sources["alpine"]?
 sources << Pkgz::PacstallSource.new  if enabled_sources["pacstall"]?
 sources << Pkgz::NixSource.new       if enabled_sources["nix"]?

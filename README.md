@@ -44,7 +44,7 @@ To use **pkgz**, you’ll need the following:
 
 - **Go compiler:**  
   Only needed if you're building from source.  
-  (Prebuilt binaries don’t require Go.)
+  Required for building from source.
 
 ---
 
@@ -55,14 +55,14 @@ Create or edit `~/.config/pkgz/config.toml`:
 ```toml
 # Enable/disable package manager sources
 [sources]
-apt = true
+apt = false
 nala = false
-flatpak = true
+flatpak = false
 paru = false
 yay = false
 pacman = false
 dnf = false
-pacstall = true
+pacstall = false
 zypper = false
 xbps = false
 nix = false
@@ -79,114 +79,69 @@ command = "sudo"  # or "doas"
 **Configuration Notes:**
 - Only enable sources you actually use by setting them to `true`
 - You **must** have an elevator configured (`sudo` or `doas`)
-- The config file is automatically created on first run if it doesn't exist
+- The config file must be created manually before first run
+- The program will show a template if the config file is missing
 
 ---
 
 ## 🛠 Installation
 
-### 🚀 Recommended: One-liner Install (Linux x86_64)
+### 🔨 Build from Source
 
-You can install the latest prebuilt binary directly with:
+**Prerequisites:**
+- Go compiler (required for building from source)
+- git (for cloning the repository)
 
-```bash
-curl -sS https://raw.githubusercontent.com/roguehashrate/pkgz/main/install.sh | bash
-```
-
-This installs `pkgz` to `~/.local/bin`.  
-Make sure `~/.local/bin` is in your `$PATH`.
-
----
-
-### 🔐 Verify Download (*Optional*)
-
-To verify the integrity of the binary:
-
-```bash
-curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.9/pkgz
-curl -LO https://github.com/roguehashrate/pkgz/releases/download/v0.1.9/pkgz.sha256
-
-sha256sum -c pkgz.sha256
-```
-
----
-
-### Build from Source
-
-**Standard Build:**
+#### 🔨 Interactive Build (Recommended)
+**Purpose**: Build for your specific target platform interactively
 ```bash
 git clone https://github.com/roguehashrate/pkgz
 cd pkgz
-go build -o pkgz .
-mv pkgz ~/.local/bin/
-```
-
-**Cross-compilation for specific platforms:**
-```bash
-# Linux ARM64 (aarch64)
-GOOS=linux GOARCH=arm64 go build -o pkgz-linux-arm64 .
-
-# Linux ARM (32-bit)
-GOOS=linux GOARCH=arm go build -o pkgz-linux-arm .
-
-# macOS (Intel)
-GOOS=darwin GOARCH=amd64 go build -o pkgz-darwin-amd64 .
-
-# macOS (Apple Silicon)
-GOOS=darwin GOARCH=arm64 go build -o pkgz-darwin-arm64 .
-
-# FreeBSD
-GOOS=freebsd GOARCH=amd64 go build -o pkgz-freebsd-amd64 .
-
-# OpenBSD
-GOOS=openbsd GOARCH=amd64 go build -o pkgz-openbsd-amd64 .
-
-# Linux 32-bit
-GOOS=linux GOARCH=386 go build -o pkgz-linux-386 .
-```
-
-**Build all platforms at once:**
-```bash
 chmod +x build.sh
 ./build.sh
 ```
-This creates compressed binaries in the `build/` directory for all supported platforms.
+The script will ask you to select:
+1. Operating system (linux, darwin, freebsd, openbsd)
+2. Architecture (amd64, 386, arm64, arm)
+
+**Output**: Creates a compressed binary in `build/{OS}/{ARCH}/`
+- Binary: `build/{OS}/{ARCH}/pkgz.gz` (extracts to 'pkgz')
 
 ---
 
-### Prebuilt Binary
+### 📦 Install the Binary
 
-Download pre-compiled binaries from [Releases](https://github.com/roguehashrate/pkgz/releases):
+After building completes, install the binary to make it available system-wide:
 
+**If you have a compressed binary (.gz):**
 ```bash
-mv pkgz ~/.local/bin
-chmod +x ~/.local/bin/pkgz
+cp build/{OS}/{ARCH}/pkgz.gz ~/.local/bin/
+cd ~/.local/bin
+gunzip pkgz.gz
+chmod +x pkgz
 ```
 
----
-
-### Tarball Installation
-
+**Verify installation:**
 ```bash
-wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.9/pkgz-0.1.9.tar.gz
-wget https://github.com/roguehashrate/pkgz/releases/download/v0.1.9/pkgz-0.1.9.tar.gz.sha256
-
-sha256sum -c pkgz-0.1.9.tar.gz.sha256
-tar -xvf pkgz-0.1.9.tar.gz
-cd pkgz
-chmod +x install.sh
-./install.sh
+pkgz --version
 ```
 
-Make sure `~/.local/bin` is in your PATH.
+**Note:** Make sure `~/.local/bin` is in your PATH. If not, add:
+```bash
+echo 'export PATH="$PATH:~/.local/bin"' >> ~/.bashrc
+source ~/.bashrc
+```
+or if you are a zsh user
+```bash
+echo 'export PATH="$PATH:~/.local/bin"' >> ~/.zshrc
+source ~/.zshrc
+```
 
 ---
 
 ## 🚀 Usage
 
-```bash
-pkgz <install|remove|update|search|clean|info|--version> [app-name]
-```
+---
 
 Examples:
 
@@ -239,17 +194,7 @@ To add support for a new package manager:
 
 ## 🔄 Migration from Crystal
 
-This project was originally written in Crystal 💎 and has been successfully migrated to Go 🐹. The migration brings several benefits:
-
-
-### 📈 Migration Results
-
-The migration maintained 100% API compatibility while improving:
-- **Binary Size**: Reduced by ~40%
-- **Startup Time**: ~2x faster cold start
-- **Memory Usage**: ~30% lower runtime memory
-- **Build Time**: ~5x faster compilation
-- **Cross-compilation**: Support for 8+ platforms vs 2-3 in Crystal
+This project was originally written in Crystal and has moved to Go mostly for compatablity reasons and also because a user is more likely to have Go installed on their system than Crystal so it reduces friction a little.
 
 ---
 

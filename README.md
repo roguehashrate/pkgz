@@ -2,7 +2,7 @@
   <img src="/assets/pkgz-logo.png" alt="Pkgz Logo" width="400"/>
 </p>
 
-**Pkgz** is a fast, extensible CLI tool written in Go 🐹 for managing software packages across multiple Linux and BSD distributions.
+**Pkgz** is a fast, extensible CLI tool written in Go 🐹 for managing multiple package types on Linux and BSD distributions.
 
 
 ---

@@ -13,7 +13,7 @@ func LoadConfig() (*Config, error) {
 
 	// Check if config file exists
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("❌ Config file not found at %s\nPlease create it manually with the sources you want enabled.\n\n[sources]\napt = true\nnala = false\nflatpak = true\nparu = false\nyay = false\npacman = false\ndnf = false\npacstall = true\n\n[elevator]\ncommand = \"sudo\"", configPath)
+		return nil, fmt.Errorf("❌ Config file not found at %s\nPlease create it manually with the sources you want enabled.\n\n# Enable/disable package manager sources\n[sources]\napt = false\nnala = false\nflatpak = false\nparu = false\nyay = false\npacman = false\ndnf = false\npacstall = false\nzypper = false\nxbps = false\nnix = false\nfreebsd = false\nfreebsd_ports = false\nopenbsd = false\nopenbsd_ports = false\n\n# Privilege escalation method (required)\n[elevator]\ncommand = \"sudo\"  # or \"doas\"", configPath)
 	}
 
 	// Read and parse TOML file

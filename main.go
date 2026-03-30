@@ -314,7 +314,7 @@ func handleClean(sources []Source) {
 			elevator.RunPrivileged("apt", "clean")
 		case "Flatpak":
 			fmt.Println("🧹 Cleaning Flatpak cache...")
-			exec.Command("flatpak", "uninstall", "--unused", "-y").Run()
+			exec.Command("flatpak", "uninstall", "--user", "--unused", "-y").Run()
 		case "Pacman":
 			fmt.Println("🧹 Cleaning Pacman cache...")
 			elevator := utils.NewElevator()

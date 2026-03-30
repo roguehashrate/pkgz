@@ -20,11 +20,39 @@ func (f *FlatpakSource) Name() string {
 }
 
 func (f *FlatpakSource) Available(app string) (bool, error) {
-	output, err := utils.RunCommand("flatpak", "search", app)
+	appID, err := f.findAppID(app)
 	if err != nil {
 		return false, nil
 	}
-	return strings.Contains(output, app), nil
+	return appID != "", nil
+}
+
+func (f *FlatpakSource) findAppID(app string) (string, error) {
+	output, err := utils.RunCommand("flatpak", "search", "--columns=application,name", app)
+	if err != nil {
+		return "", err
+	}
+
+	lines := strings.Split(output, "\n")
+	appLower := strings.ToLower(app)
+
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "\t", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		appID := parts[0]
+		appName := parts[1]
+
+		if strings.Contains(strings.ToLower(appName), appLower) ||
+			strings.Contains(strings.ToLower(appID), appLower) {
+			return appID, nil
+		}
+	}
+	return "", nil
 }
 
 func (f *FlatpakSource) Installed(app string) (bool, error) {
@@ -36,25 +64,31 @@ func (f *FlatpakSource) Installed(app string) (bool, error) {
 }
 
 func (f *FlatpakSource) Install(app string) error {
-	// Flatpak install doesn't need privilege elevation
-	_, err := utils.RunCommand("flatpak", "install", "-y", app)
+	appID, err := f.findAppID(app)
+	if err != nil || appID == "" {
+		return f.installWithName(app)
+	}
+	_, err = utils.RunCommand("flatpak", "install", "--user", "-y", "flathub", appID)
+	return err
+}
+
+func (f *FlatpakSource) installWithName(app string) error {
+	_, err := utils.RunCommand("flatpak", "install", "--user", "-y", "flathub", app)
 	return err
 }
 
 func (f *FlatpakSource) Remove(app string) error {
-	// Flatpak uninstall doesn't need privilege elevation
-	_, err := utils.RunCommand("flatpak", "uninstall", "-y", app)
+	_, err := utils.RunCommand("flatpak", "uninstall", "--user", "-y", "flathub", app)
 	return err
 }
 
 func (f *FlatpakSource) Update() error {
-	// Flatpak update doesn't need privilege elevation
-	_, err := utils.RunCommand("flatpak", "update", "-y")
+	_, err := utils.RunCommand("flatpak", "update", "--user", "-y", "flathub")
 	return err
 }
 
 func (f *FlatpakSource) Search(app string) (bool, error) {
-	output, err := utils.RunCommand("flatpak", "search", app)
+	output, err := utils.RunCommand("flatpak", "search", "--columns=name", app)
 	if err != nil {
 		return false, nil
 	}

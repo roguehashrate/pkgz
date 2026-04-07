@@ -56,7 +56,7 @@ func (f *FlatpakSource) findAppID(app string) (string, error) {
 }
 
 func (f *FlatpakSource) Installed(app string) (bool, error) {
-	output, err := utils.RunCommand("flatpak", "list")
+	output, err := utils.RunCommand("flatpak", "list", "--user")
 	if err != nil {
 		return false, nil
 	}
@@ -96,7 +96,7 @@ func (f *FlatpakSource) Search(app string) (bool, error) {
 }
 
 func (f *FlatpakSource) InstalledCount() (int, error) {
-	lines, err := utils.GetCommandOutput("flatpak", "list", "--app")
+	lines, err := utils.GetCommandOutput("flatpak", "list", "--user", "--app")
 	if err != nil {
 		return 0, nil
 	}

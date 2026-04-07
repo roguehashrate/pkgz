@@ -78,12 +78,12 @@ func (f *FlatpakSource) installWithName(app string) error {
 }
 
 func (f *FlatpakSource) Remove(app string) error {
-	_, err := utils.RunCommand("flatpak", "uninstall", "--user", "-y", "flathub", app)
+	_, err := utils.RunCommand("flatpak", "uninstall", "--user", "-y", app)
 	return err
 }
 
 func (f *FlatpakSource) Update() error {
-	_, err := utils.RunCommand("flatpak", "update", "--user", "-y", "flathub")
+	_, err := utils.RunCommand("flatpak", "update", "--user", "-y")
 	return err
 }
 

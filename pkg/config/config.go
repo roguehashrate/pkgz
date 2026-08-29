@@ -13,7 +13,7 @@ func LoadConfig() (*Config, error) {
 
 	// Check if config file exists
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("❌ Config file not found at %s\nPlease create it manually with the sources you want enabled.\n\n# Enable/disable package manager sources\n[sources]\napt = false\nnala = false\nflatpak = false\nparu = false\nyay = false\npacman = false\ndnf = false\npacstall = false\nzypper = false\nxbps = false\nnix = false\nfreebsd = false\nfreebsd_ports = false\nopenbsd = false\nopenbsd_ports = false\n\n# Privilege escalation method (required)\n[elevator]\ncommand = \"sudo\"  # or \"doas\"", configPath)
+		return nil, fmt.Errorf("❌ Config file not found at %s\nPlease create it manually with the sources you want enabled.\n\n# Enable/disable package manager sources\n[sources]\napt = false\nnala = false\nflatpak = false\nparu = false\nyay = false\npacman = false\ndnf = false\nzypper = false\n\n# Privilege escalation method (required)\n[elevator]\ncommand = \"sudo\"  # or \"doas\"", configPath)
 	}
 
 	// Read and parse TOML file
@@ -39,22 +39,13 @@ func LoadConfig() (*Config, error) {
 // GetEnabledSources returns a map of enabled source names
 func (c *Config) GetEnabledSources() map[string]bool {
 	return map[string]bool{
-		"apt":           c.Sources.Apt,
-		"nala":          c.Sources.Nala,
-		"flatpak":       c.Sources.Flatpak,
-		"pacman":        c.Sources.Pacman,
-		"paru":          c.Sources.Paru,
-		"yay":           c.Sources.Yay,
-		"dnf":           c.Sources.Dnf,
-		"pacstall":      c.Sources.Pacstall,
-		"zypper":        c.Sources.Zypper,
-		"xbps":          c.Sources.Xbps,
-		"xbps_src":      c.Sources.XbpsSrc,
-		"alpine":        c.Sources.Alpine,
-		"nix":           c.Sources.Nix,
-		"freebsd":       c.Sources.FreeBsd,
-		"freebsd_ports": c.Sources.FreeBsdPorts,
-		"openbsd":       c.Sources.OpenBsd,
-		"openbsd_ports": c.Sources.OpenBsdPorts,
+		"apt":     c.Sources.Apt,
+		"nala":    c.Sources.Nala,
+		"flatpak": c.Sources.Flatpak,
+		"pacman":  c.Sources.Pacman,
+		"paru":    c.Sources.Paru,
+		"yay":     c.Sources.Yay,
+		"dnf":     c.Sources.Dnf,
+		"zypper":  c.Sources.Zypper,
 	}
 }

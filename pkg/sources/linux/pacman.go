@@ -1,81 +1,37 @@
 package linux
 
 import (
-	"strings"
-
 	"github.com/roguehashrate/pkgz/pkg/sources"
 	"github.com/roguehashrate/pkgz/pkg/utils"
 )
 
-type PacmanSource struct {
-	elevator *utils.Elevator
-}
-
+// NewPacmanSource returns a source backed by pacman (Arch).
 func NewPacmanSource(elevator *utils.Elevator) sources.Source {
-	return &PacmanSource{elevator: elevator}
-}
-
-func (p *PacmanSource) Name() string {
-	return "Pacman"
-}
-
-func (p *PacmanSource) Available(app string) (bool, error) {
-	output, err := utils.RunCommand("pacman", "-Ss", app)
-	if err != nil {
-		return false, nil
+	var c *commandSource
+	c = &commandSource{
+		name: "Pacman",
+		available: availableContains("pacman", func(app string) []string {
+			return []string{"-Ss", app}
+		}),
+		installed: installedRedirect("pacman", func(app string) []string {
+			return []string{"-Qn", app}
+		}),
+		install: func(app string) error {
+			return c.runOp(elevator, true, "pacman", []string{"-S", "--noconfirm", app})
+		},
+		remove: func(app string) error {
+			return c.runOp(elevator, true, "pacman", []string{"-R", "--noconfirm", app})
+		},
+		update: func() error {
+			return c.runOp(elevator, true, "pacman", []string{"-Syu", "--noconfirm"})
+		},
+		listUpdates: listUpdatesCmd("pacman", []string{"-Qu"}, func(output string) []string {
+			return listFirstField(output)
+		}),
+		search: searchContains("pacman", func(app string) []string {
+			return []string{"-Ss", app}
+		}),
+		installedCount: countOutput("pacman", "-Qn"),
 	}
-	return strings.Contains(output, app), nil
-}
-
-func (p *PacmanSource) Installed(app string) (bool, error) {
-	return utils.RunCommandWithRedirect("pacman", "-Qn", app), nil
-}
-
-func (p *PacmanSource) Install(app string) error {
-	return p.elevator.RunPrivileged("pacman", "-S", "--noconfirm", app)
-}
-
-func (p *PacmanSource) Remove(app string) error {
-	return p.elevator.RunPrivileged("pacman", "-R", "--noconfirm", app)
-}
-
-func (p *PacmanSource) Update() error {
-	return p.elevator.RunPrivileged("pacman", "-Syu", "--noconfirm")
-}
-
-func (p *PacmanSource) ListUpdates() ([]string, error) {
-	output, err := utils.RunCommand("pacman", "-Qu")
-	if err != nil && strings.TrimSpace(output) == "" {
-		return nil, nil
-	}
-
-	var updates []string
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		fields := strings.Fields(line)
-		if len(fields) == 0 {
-			continue
-		}
-		updates = append(updates, fields[0])
-	}
-	return updates, nil
-}
-
-func (p *PacmanSource) Search(app string) (bool, error) {
-	output, err := utils.RunCommand("pacman", "-Ss", app)
-	if err != nil {
-		return false, nil
-	}
-	return strings.Contains(strings.ToLower(output), strings.ToLower(app)), nil
-}
-
-func (p *PacmanSource) InstalledCount() (int, error) {
-	lines, err := utils.GetCommandOutput("pacman", "-Qn")
-	if err != nil {
-		return 0, nil
-	}
-	return len(lines), nil
+	return c
 }

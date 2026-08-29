@@ -7,48 +7,36 @@ import (
 	"github.com/roguehashrate/pkgz/pkg/utils"
 )
 
-type ZypperSource struct {
-	elevator *utils.Elevator
-}
-
+// NewZypperSource returns a source backed by zypper/rpm (openSUSE).
 func NewZypperSource(elevator *utils.Elevator) sources.Source {
-	return &ZypperSource{elevator: elevator}
-}
-
-func (z *ZypperSource) Name() string {
-	return "Zypper"
-}
-
-func (z *ZypperSource) Available(app string) (bool, error) {
-	output, err := utils.RunCommand("zypper", "search", app)
-	if err != nil {
-		return false, nil
+	var c *commandSource
+	c = &commandSource{
+		name: "Zypper",
+		available: availableContains("zypper", func(app string) []string {
+			return []string{"search", app}
+		}),
+		installed: installedRedirect("rpm", func(app string) []string {
+			return []string{"-q", app}
+		}),
+		install: func(app string) error {
+			return c.runOp(elevator, true, "zypper", []string{"install", "-y", app})
+		},
+		remove: func(app string) error {
+			return c.runOp(elevator, true, "zypper", []string{"remove", "-y", app})
+		},
+		update: func() error {
+			return c.runOp(elevator, true, "sh", []string{"-c", "zypper refresh && zypper update -y"})
+		},
+		listUpdates: listUpdatesCmd("zypper", []string{"list-updates", "--no-refresh"}, parseZypperUpdates),
+		search: searchContains("zypper", func(app string) []string {
+			return []string{"search", app}
+		}),
+		installedCount: countOutput("rpm", "-qa"),
 	}
-	return strings.Contains(output, app), nil
+	return c
 }
 
-func (z *ZypperSource) Installed(app string) (bool, error) {
-	return utils.RunCommandWithRedirect("rpm", "-q", app), nil
-}
-
-func (z *ZypperSource) Install(app string) error {
-	return z.elevator.RunPrivileged("zypper", "install", "-y", app)
-}
-
-func (z *ZypperSource) Remove(app string) error {
-	return z.elevator.RunPrivileged("zypper", "remove", "-y", app)
-}
-
-func (z *ZypperSource) Update() error {
-	return z.elevator.RunPrivileged("sh", "-c", "zypper refresh && zypper update -y")
-}
-
-func (z *ZypperSource) ListUpdates() ([]string, error) {
-	output, err := utils.RunCommand("zypper", "list-updates", "--no-refresh")
-	if err != nil && strings.TrimSpace(output) == "" {
-		return nil, nil
-	}
-
+func parseZypperUpdates(output string) []string {
 	var updates []string
 	for _, line := range strings.Split(output, "\n") {
 		parts := strings.Split(line, "|")
@@ -67,21 +55,5 @@ func (z *ZypperSource) ListUpdates() ([]string, error) {
 			updates = append(updates, name)
 		}
 	}
-	return updates, nil
-}
-
-func (z *ZypperSource) Search(app string) (bool, error) {
-	output, err := utils.RunCommand("zypper", "search", app)
-	if err != nil {
-		return false, nil
-	}
-	return strings.Contains(strings.ToLower(output), strings.ToLower(app)), nil
-}
-
-func (z *ZypperSource) InstalledCount() (int, error) {
-	lines, err := utils.GetCommandOutput("rpm", "-qa")
-	if err != nil {
-		return 0, nil
-	}
-	return len(lines), nil
+	return updates
 }

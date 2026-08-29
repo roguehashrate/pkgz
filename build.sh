@@ -5,12 +5,12 @@
 #   build.sh --dev    quick host build + .tar.gz and .deb packages
 set -e
 
-VERSION="1.0.0"
+VERSION="1.0.1"
 OUTPUT_DIR="build"
 BINARY_NAME="pkgz"
 
 # Available options
-OS_OPTIONS=("linux" "darwin" "freebsd" "openbsd")
+OS_OPTIONS=("linux")
 ARCH_OPTIONS=("amd64" "386" "arm64" "arm")
 
 DEV_MODE=false
@@ -64,7 +64,7 @@ Section: utils
 Priority: optional
 Architecture: $deb_arch
 Maintainer: roguehashrate <https://github.com/roguehashrate>
-Description: Fast, extensible CLI tool for managing multiple package types on Linux and BSD.
+Description: Fast, extensible CLI tool for managing multiple package types on Linux.
 EOF
     dpkg-deb --root-owner-group --build "$stage" "$deb_path" >/dev/null
     rm -rf "$stage"

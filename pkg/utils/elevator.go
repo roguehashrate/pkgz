@@ -50,6 +50,15 @@ func (e *Elevator) RunPrivileged(cmd string, args ...string) error {
 	return execCmd.Run()
 }
 
+// RunPrivilegedStreaming runs a command with privilege escalation, forwarding
+// each line of its combined stdout+stderr to onLine while keeping stdin
+// attached so the elevator (sudo/doas) can prompt for passwords.
+func (e *Elevator) RunPrivilegedStreaming(cmd string, args []string, onLine func(string)) error {
+	elevator := e.GetElevatorCommand("")
+	fullArgs := append([]string{cmd}, args...)
+	return RunCommandStreaming(elevator, fullArgs, onLine)
+}
+
 // CommandExists checks if a command exists in PATH
 func CommandExists(cmd string) bool {
 	_, err := exec.LookPath(cmd)

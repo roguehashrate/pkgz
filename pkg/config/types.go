@@ -3,7 +3,7 @@ package config
 import "os"
 
 const (
-	VERSION     = "1.0.0"
+	VERSION     = "1.0.1"
 	CONFIG_PATH = "~/.config/pkgz/config.toml"
 )
 
@@ -13,23 +13,14 @@ type Config struct {
 }
 
 type SourcesConfig struct {
-	Apt          bool `toml:"apt"`
-	Nala         bool `toml:"nala"`
-	Flatpak      bool `toml:"flatpak"`
-	Pacman       bool `toml:"pacman"`
-	Paru         bool `toml:"paru"`
-	Yay          bool `toml:"yay"`
-	Dnf          bool `toml:"dnf"`
-	Pacstall     bool `toml:"pacstall"`
-	Zypper       bool `toml:"zypper"`
-	Xbps         bool `toml:"xbps"`
-	XbpsSrc      bool `toml:"xbps_src"`
-	Alpine       bool `toml:"alpine"`
-	Nix          bool `toml:"nix"`
-	FreeBsd      bool `toml:"freebsd"`
-	FreeBsdPorts bool `toml:"freebsd_ports"`
-	OpenBsd      bool `toml:"openbsd"`
-	OpenBsdPorts bool `toml:"openbsd_ports"`
+	Apt     bool `toml:"apt"`
+	Nala    bool `toml:"nala"`
+	Flatpak bool `toml:"flatpak"`
+	Pacman  bool `toml:"pacman"`
+	Paru    bool `toml:"paru"`
+	Yay     bool `toml:"yay"`
+	Dnf     bool `toml:"dnf"`
+	Zypper  bool `toml:"zypper"`
 }
 
 type ElevatorConfig struct {

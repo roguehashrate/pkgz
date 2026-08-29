@@ -7,48 +7,36 @@ import (
 	"github.com/roguehashrate/pkgz/pkg/utils"
 )
 
-type DnfSource struct {
-	elevator *utils.Elevator
-}
-
+// NewDnfSource returns a source backed by dnf/rpm (Fedora/RHEL).
 func NewDnfSource(elevator *utils.Elevator) sources.Source {
-	return &DnfSource{elevator: elevator}
-}
-
-func (d *DnfSource) Name() string {
-	return "DNF"
-}
-
-func (d *DnfSource) Available(app string) (bool, error) {
-	output, err := utils.RunCommand("dnf", "search", app)
-	if err != nil {
-		return false, nil
+	var c *commandSource
+	c = &commandSource{
+		name: "DNF",
+		available: availableContains("dnf", func(app string) []string {
+			return []string{"search", app}
+		}),
+		installed: installedRedirect("rpm", func(app string) []string {
+			return []string{"-q", app}
+		}),
+		install: func(app string) error {
+			return c.runOp(elevator, true, "dnf", []string{"install", "-y", app})
+		},
+		remove: func(app string) error {
+			return c.runOp(elevator, true, "dnf", []string{"remove", "-y", app})
+		},
+		update: func() error {
+			return c.runOp(elevator, true, "dnf", []string{"upgrade", "-y"})
+		},
+		listUpdates: listUpdatesCmd("dnf", []string{"check-update"}, parseDnfUpdates),
+		search: searchContains("dnf", func(app string) []string {
+			return []string{"search", app}
+		}),
+		installedCount: countOutput("rpm", "-qa"),
 	}
-	return strings.Contains(output, app), nil
+	return c
 }
 
-func (d *DnfSource) Installed(app string) (bool, error) {
-	return utils.RunCommandWithRedirect("rpm", "-q", app), nil
-}
-
-func (d *DnfSource) Install(app string) error {
-	return d.elevator.RunPrivileged("dnf", "install", "-y", app)
-}
-
-func (d *DnfSource) Remove(app string) error {
-	return d.elevator.RunPrivileged("dnf", "remove", "-y", app)
-}
-
-func (d *DnfSource) Update() error {
-	return d.elevator.RunPrivileged("dnf", "upgrade", "-y")
-}
-
-func (d *DnfSource) ListUpdates() ([]string, error) {
-	output, err := utils.RunCommand("dnf", "check-update")
-	if err != nil && strings.TrimSpace(output) == "" {
-		return nil, nil
-	}
-
+func parseDnfUpdates(output string) []string {
 	var updates []string
 	for _, line := range strings.Split(output, "\n") {
 		line = strings.TrimSpace(line)
@@ -64,21 +52,5 @@ func (d *DnfSource) ListUpdates() ([]string, error) {
 		}
 		updates = append(updates, fields[0])
 	}
-	return updates, nil
-}
-
-func (d *DnfSource) Search(app string) (bool, error) {
-	output, err := utils.RunCommand("dnf", "search", app)
-	if err != nil {
-		return false, nil
-	}
-	return strings.Contains(strings.ToLower(output), strings.ToLower(app)), nil
-}
-
-func (d *DnfSource) InstalledCount() (int, error) {
-	lines, err := utils.GetCommandOutput("rpm", "-qa")
-	if err != nil {
-		return 0, nil
-	}
-	return len(lines), nil
+	return updates
 }

@@ -1,10 +1,62 @@
 package utils
 
 import (
+	"bufio"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 )
+
+// RunCommandStreaming runs a command, forwarding each line of its combined
+// stdout+stderr to onLine, and keeping stdin attached so interactive prompts
+// (e.g. sudo/doas passwords) still work. Returns any error the command exits
+// with (nil exit code => nil error).
+func RunCommandStreaming(name string, args []string, onLine func(string)) error {
+	cmd := exec.Command(name, args...)
+	cmd.Stdin = os.Stdin
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	lineCh := make(chan string, 64)
+	var wgdone sync.WaitGroup
+	wgdone.Add(1)
+	go func() {
+		defer wgdone.Done()
+		scanner := bufio.NewScanner(io.MultiReader(stdout, stderr))
+		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+		for scanner.Scan() {
+			lineCh <- scanner.Text()
+		}
+	}()
+
+	go func() {
+		wgdone.Wait()
+		close(lineCh)
+	}()
+
+	for line := range lineCh {
+		onLine(line)
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 // RunCommand runs a command and returns its combined output
 func RunCommand(name string, args ...string) (string, error) {

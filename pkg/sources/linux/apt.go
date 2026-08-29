@@ -1,86 +1,35 @@
 package linux
 
 import (
-	"strings"
-
 	"github.com/roguehashrate/pkgz/pkg/sources"
 	"github.com/roguehashrate/pkgz/pkg/utils"
 )
 
-type AptSource struct {
-	elevator *utils.Elevator
-}
-
+// NewAptSource returns a source backed by apt/apt-cache/dpkg (Debian/Ubuntu).
 func NewAptSource(elevator *utils.Elevator) sources.Source {
-	return &AptSource{elevator: elevator}
-}
-
-func (a *AptSource) Name() string {
-	return "Apt"
-}
-
-func (a *AptSource) Available(app string) (bool, error) {
-	output, err := utils.RunCommand("apt-cache", "search", app)
-	if err != nil {
-		return false, nil // Return false, not error, for availability
+	var c *commandSource
+	c = &commandSource{
+		name: "Apt",
+		available: availableContains("apt-cache", func(app string) []string {
+			return []string{"search", app}
+		}),
+		installed: func(app string) (bool, error) {
+			return aptAppInstalled(app), nil
+		},
+		install: func(app string) error {
+			return c.runOp(elevator, true, "apt", []string{"install", "-y", app})
+		},
+		remove: func(app string) error {
+			return c.runOp(elevator, true, "apt", []string{"remove", "-y", aptRemoveTarget(app)})
+		},
+		update: func() error {
+			return c.runOp(elevator, true, "sh", []string{"-c", "apt update && apt upgrade -y"})
+		},
+		listUpdates: listUpdatesCmd("apt", []string{"list", "--upgradable"}, parseAptUpgradable),
+		search: searchContains("apt-cache", func(app string) []string {
+			return []string{"search", app}
+		}),
+		installedCount: countOutput("dpkg-query", "-f", ".\n", "-W"),
 	}
-	return strings.Contains(output, app), nil
-}
-
-func (a *AptSource) Installed(app string) (bool, error) {
-	return utils.RunCommandWithRedirect("dpkg", "-s", app), nil
-}
-
-func (a *AptSource) Install(app string) error {
-	return a.elevator.RunPrivileged("apt", "install", "-y", app)
-}
-
-func (a *AptSource) Remove(app string) error {
-	return a.elevator.RunPrivileged("apt", "remove", "-y", app)
-}
-
-func (a *AptSource) Update() error {
-	return a.elevator.RunPrivileged("sh", "-c", "apt update && apt upgrade -y")
-}
-
-func (a *AptSource) ListUpdates() ([]string, error) {
-	output, err := utils.RunCommand("apt", "list", "--upgradable")
-	if err != nil && strings.TrimSpace(output) == "" {
-		return nil, nil
-	}
-	return parseAptUpgradable(output), nil
-}
-
-func parseAptUpgradable(output string) []string {
-	var updates []string
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "WARNING") ||
-			strings.HasPrefix(line, "Notice") || strings.HasPrefix(line, "Listing") {
-			continue
-		}
-		fields := strings.Fields(line)
-		if len(fields) == 0 || !strings.Contains(fields[0], "/") {
-			continue
-		}
-		name := fields[0][:strings.Index(fields[0], "/")]
-		updates = append(updates, name)
-	}
-	return updates
-}
-
-func (a *AptSource) Search(app string) (bool, error) {
-	output, err := utils.RunCommand("apt-cache", "search", app)
-	if err != nil {
-		return false, nil
-	}
-	return strings.Contains(strings.ToLower(output), strings.ToLower(app)), nil
-}
-
-func (a *AptSource) InstalledCount() (int, error) {
-	lines, err := utils.GetCommandOutput("dpkg-query", "-f", ".\n", "-W")
-	if err != nil {
-		return 0, nil
-	}
-	return len(lines), nil
+	return c
 }

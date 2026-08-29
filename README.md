@@ -2,7 +2,7 @@
   <img src="/assets/pkgz-logo.png" alt="Pkgz Logo" width="400"/>
 </p>
 
-**Pkgz** is a fast, extensible CLI tool written in Go 🐹 for managing multiple package types on Linux and BSD distributions.
+**Pkgz** is a fast, extensible CLI tool written in Go 🐹 for managing multiple package types on Linux distributions.
 
 
 ---
@@ -10,6 +10,7 @@
 ## ✨ Features
 
 - ✅ Install, remove, update, refresh and search apps  
+- 🖥️ Custom TUI (bubbletea) that drives `update`/`install`/`remove`/`clean` in a single unified interface — per-source status, live spinner, and a scrollable output pane — instead of each package manager taking over your terminal.
 - 🔍 Interactive source selection if app is available in multiple sources  
 - 🔐 Automatically uses `doas` or `sudo` for privilege elevation  
 - 📦 Supports:
@@ -19,15 +20,10 @@
   - Paru (AUR helper)
   - Yay (AUR helper)
   - DNF (Fedora/RHEL)
-  - APK (Alpine)
-  - Pacstall
   - Zypper (openSUSE)
-  - XBPS (Void)
-  - Nix (`Untested`)
-  - FreeBSD & FreeBSD Ports (`Untested`)
-  - OpenBSD & OpenBSD Ports (`Untested`)
 - ⚙️ Configurable via `~/.config/pkgz/config.toml`  
 - 🌱 Extensible to support other package managers  
+- 💾 Falls back to plain console output when stdout is not a terminal (pipes, scripts, CI)
 
 ---
 
@@ -39,8 +35,7 @@ To use **pkgz**, you’ll need the following:
   Either `sudo` or `doas` must be installed.
 
 - **At least one supported package manager:**  
-  Linux: `apt`, `nala`, `flatpak`, `pacman`, `paru`, `yay`, `dnf`, `zypper`, `apk`, `xbps`, `nix`  or `pacstall`  
-  BSD: `FreeBSD pkg`, `FreeBSD Ports`, `OpenBSD pkg`, `OpenBSD Ports`
+  `apt`, `nala`, `flatpak`, `pacman`, `paru`, `yay`, `dnf`, or `zypper`
 
 - **Go compiler:**  
   Only needed if you're building from source.  
@@ -62,14 +57,7 @@ paru = false
 yay = false
 pacman = false
 dnf = false
-pacstall = false
 zypper = false
-xbps = false
-nix = false
-freebsd = false
-freebsd_ports = false
-openbsd = false
-openbsd_ports = false
 
 # Privilege escalation method (required)
 [elevator]
@@ -101,7 +89,7 @@ chmod +x build.sh
 ./build.sh
 ```
 The script will ask you to select:
-1. Operating system (linux, darwin, freebsd, openbsd)
+1. Operating system (linux)
 2. Architecture (amd64, 386, arm64, arm)
 
 **Output**: Creates a compressed binary in `build/{OS}/{ARCH}/`
@@ -176,8 +164,33 @@ $ pkgz install gimp
 1. APT
 2. Flatpak
 Which one would you like to use? [1-2]: 2
-🚀 Installing with Flatpak...
 ```
+
+When you run `pkgz update` (or an install/remove/clean in a terminal), a TUI appears showing each enabled source with its status and live output:
+
+```
+╭─────────────╮
+│ pkgz update │
+╰─────────────╯
+
+● ⣻ ▸ Updating Apt
+✓ Updating Flatpak
+○ Updating Pacman
+
+Running...
+
+↑/↓ select task · o toggle log · q quit
+```
+
+**TUI controls:**
+- `↑`/`↓` (or `←`/`→`) — select a source / move between entries
+- `enter` (or `space`) — confirm a selection (e.g. which source to install from)
+- `o` — toggle the captured-output log pane
+- `q`, `esc`, or `Ctrl+C` — quit
+
+When an app is available from multiple sources (e.g. emacs in both Apt and Flatpak), `pkgz install` shows a picker inside the TUI so you can choose the source with arrow keys and `enter`, then it runs the install in the same window.
+
+When stdout is not a terminal (e.g. `pkgz update | tee log`), pkgz falls back to plain console output automatically.
 
 ---
 
@@ -192,15 +205,18 @@ Which one would you like to use? [1-2]: 2
 
 To add support for a new package manager:
 
-1. Implement the `Source` interface  
-2. Implement the interface methods:
-   - `Name()`  
-   - `Available(app string)`  
-   - `Install(app string)`  
-   - `Remove(app string)`  
-   - `Update()`
-   - `Search(app string)`
-3. Add your source to the enabled sources list and config.
+1. Implement the `Source` interface (see `main.go`):
+   - `Name() string`
+   - `Available(app string) (bool, error)`
+   - `Installed(app string) (bool, error)`
+   - `Install(app string) error`
+   - `Remove(app string) error`
+   - `Update() error`
+   - `ListUpdates() ([]string, error)`
+   - `Search(app string) (bool, error)`
+   - `InstalledCount() (int, error)`
+   - `SetTask(utils.Task)` — optional hook so run-time output streams into the TUI
+2. Add your source to `main.go`'s enabled-sources list and to the config.
 
 ---
 

@@ -4,17 +4,17 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 
+	"github.com/mattn/go-isatty"
 	"github.com/roguehashrate/pkgz/pkg/config"
-	"github.com/roguehashrate/pkgz/pkg/sources/bsd"
 	"github.com/roguehashrate/pkgz/pkg/sources/linux"
+	"github.com/roguehashrate/pkgz/pkg/tui"
 	"github.com/roguehashrate/pkgz/pkg/utils"
 )
 
-const VERSION = "1.0.0"
+const VERSION = "1.0.1"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -68,36 +68,8 @@ func main() {
 	if enabledSources["dnf"] {
 		sources = append(sources, linux.NewDnfSource(elevator))
 	}
-	if enabledSources["xbps"] {
-		sources = append(sources, linux.NewXbpsSource(elevator))
-	}
-	if enabledSources["alpine"] {
-		sources = append(sources, linux.NewApkSource(elevator))
-	}
-	if enabledSources["pacstall"] {
-		sources = append(sources, linux.NewPacstallSource(elevator))
-	}
 	if enabledSources["zypper"] {
 		sources = append(sources, linux.NewZypperSource(elevator))
-	}
-	if enabledSources["nix"] {
-		sources = append(sources, linux.NewNixSource(elevator))
-	}
-	if enabledSources["xbps_src"] {
-		sources = append(sources, linux.NewXbpsSrcSource(elevator))
-	}
-	// BSD Sources
-	if enabledSources["freebsd"] {
-		sources = append(sources, bsd.NewFreeBsdSource(elevator))
-	}
-	if enabledSources["freebsd_ports"] {
-		sources = append(sources, bsd.NewFreeBsdPortsSource(elevator))
-	}
-	if enabledSources["openbsd"] {
-		sources = append(sources, bsd.NewOpenBsdSource(elevator))
-	}
-	if enabledSources["openbsd_ports"] {
-		sources = append(sources, bsd.NewOpenBsdPortsSource(elevator))
 	}
 
 	// Handle commands
@@ -136,6 +108,94 @@ type Source interface {
 	InstalledCount() (int, error)
 }
 
+// isTerminal reports whether stdout is a TTY (used to pick TUI vs plain output).
+func isTerminal() bool {
+	return isatty.IsTerminal(os.Stdout.Fd())
+}
+
+// withTask attaches a reporting task to a source it if supports it, so the
+// source's streaming output is surfaced in the TUI.
+func withTask(src Source, t utils.Task) Source {
+	if s, ok := src.(interface{ SetTask(utils.Task) }); ok {
+		s.SetTask(t)
+	}
+	return src
+}
+
+// runOps runs operations through the TUI when stdout is a terminal, otherwise
+// falls back to plain sequential output (pipes, CI, scripts).
+func runOps(title string, ops []tui.Op) error {
+	if isTerminal() {
+		return tui.Run(title, "", nil, ops)
+	}
+	return tui.RunPlain(ops)
+}
+
+// runInstall presents a source picker inside the TUI when multiple options are
+// available, then runs the chosen install. Falls back to a plain numbered
+// prompt when stdout is not a terminal.
+func runInstall(appName string, availableSources []Source) error {
+	return runPick("install", appName, availableSources, func(src Source) tui.Op {
+		return tui.Op{
+			Label: "Installing " + appName + " via " + src.Name(),
+			Run: func(t *tui.Task) error {
+				return withTask(src, t).Install(appName)
+			},
+		}
+	})
+}
+
+// runRemove presents a source picker inside the TUI when multiple installed
+// sources match, then runs the chosen removal.
+func runRemove(appName string, installedSources []Source) error {
+	return runPick("remove", appName, installedSources, func(src Source) tui.Op {
+		return tui.Op{
+			Label: "Removing " + appName + " via " + src.Name(),
+			Run: func(t *tui.Task) error {
+				return withTask(src, t).Remove(appName)
+			},
+		}
+	})
+}
+
+// runPick runs a single source operation chosen from candidate sources. When
+// more than one candidate exists it shows a picker in the TUI (or a numbered
+// prompt when not a terminal); a single candidate runs directly.
+func runPick(verb, appName string, sources []Source, build func(Source) tui.Op) error {
+	if len(sources) == 1 {
+		src := sources[0]
+		return runOps("pkgz "+verb, []tui.Op{build(src)})
+	}
+
+	choices := make([]string, len(sources))
+	ops := make([]tui.Op, len(sources))
+	for i, src := range sources {
+		src := src
+		choices[i] = src.Name()
+		ops[i] = build(src)
+	}
+
+	if isTerminal() {
+		return tui.Run("pkgz "+verb, fmt.Sprintf("'%s' is available via multiple sources. Choose one:", appName), choices, ops)
+	}
+
+	// Non-TTY: plain numbered prompt.
+	fmt.Printf("⚠️ '%s' is available via multiple sources:\n", appName)
+	for i, src := range sources {
+		fmt.Printf("%d. %s\n", i+1, src.Name())
+	}
+	fmt.Printf("Which one would you like to use? [1-%d]: ", len(sources))
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+	choice, err := strconv.Atoi(input)
+	if err != nil || choice < 1 || choice > len(sources) {
+		fmt.Println("❌ Invalid choice.")
+		return nil
+	}
+	return runOps("pkgz "+verb, []tui.Op{ops[choice-1]})
+}
+
 func handleInstall(appName string, sources []Source) {
 	if appName == "" {
 		fmt.Println("Usage: pkgz install <app-name>")
@@ -157,35 +217,9 @@ func handleInstall(appName string, sources []Source) {
 	}
 
 	if len(availableSources) == 1 {
-		source := availableSources[0]
-		fmt.Printf("✅ Found '%s' in %s. Installing...\n", appName, source.Name())
-		if err := source.Install(appName); err != nil {
-			fmt.Printf("❌ Installation failed: %v\n", err)
-		}
-		return
+		fmt.Printf("✅ Found '%s' in %s.\n", appName, availableSources[0].Name())
 	}
-
-	fmt.Printf("📦 Found '%s' in multiple sources:\n", appName)
-	for i, source := range availableSources {
-		fmt.Printf("%d. %s\n", i+1, source.Name())
-	}
-
-	fmt.Printf("Which one would you like to use? [1-%d]: ", len(availableSources))
-	reader := bufio.NewReader(os.Stdin)
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
-
-	choice, err := strconv.Atoi(input)
-	if err != nil || choice < 1 || choice > len(availableSources) {
-		fmt.Println("❌ Invalid choice.")
-		return
-	}
-
-	selected := availableSources[choice-1]
-	fmt.Printf("🚀 Installing with %s...\n", selected.Name())
-	if err := selected.Install(appName); err != nil {
-		fmt.Printf("❌ Installation failed: %v\n", err)
-	}
+	runInstall(appName, availableSources)
 }
 
 func handleRemove(appName string, sources []Source) {
@@ -207,44 +241,23 @@ func handleRemove(appName string, sources []Source) {
 	}
 
 	if len(installedSources) == 1 {
-		source := installedSources[0]
-		fmt.Printf("🗑️ Removing '%s' from %s...\n", appName, source.Name())
-		if err := source.Remove(appName); err != nil {
-			fmt.Printf("❌ Removal failed: %v\n", err)
-		}
-		return
+		fmt.Printf("🗑️ Found '%s' in %s.\n", appName, installedSources[0].Name())
 	}
-
-	fmt.Printf("⚠️ '%s' is installed in multiple sources:\n", appName)
-	for i, source := range installedSources {
-		fmt.Printf("%d. %s\n", i+1, source.Name())
-	}
-
-	fmt.Printf("Which one would you like to remove? [1-%d]: ", len(installedSources))
-	reader := bufio.NewReader(os.Stdin)
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
-
-	choice, err := strconv.Atoi(input)
-	if err != nil || choice < 1 || choice > len(installedSources) {
-		fmt.Println("❌ Invalid choice.")
-		return
-	}
-
-	selected := installedSources[choice-1]
-	fmt.Printf("🗑️ Removing '%s' from %s...\n", appName, selected.Name())
-	if err := selected.Remove(appName); err != nil {
-		fmt.Printf("❌ Removal failed: %v\n", err)
-	}
+	runRemove(appName, installedSources)
 }
 
 func handleUpdate(sources []Source) {
-	for _, source := range sources {
-		fmt.Printf("⬆️ Updating %s packages...\n", source.Name())
-		if err := source.Update(); err != nil {
-			fmt.Printf("❌ Update failed for %s: %v\n", source.Name(), err)
-		}
+	ops := make([]tui.Op, 0, len(sources))
+	for _, src := range sources {
+		src := src
+		ops = append(ops, tui.Op{
+			Label: "Updating " + src.Name(),
+			Run: func(t *tui.Task) error {
+				return withTask(src, t).Update()
+			},
+		})
 	}
+	runOps("pkgz update", ops)
 }
 
 func handleRefresh(sources []Source) {
@@ -330,47 +343,61 @@ func handleInfo(appName string, sources []Source) {
 }
 
 func handleClean(sources []Source) {
+	var ops []tui.Op
 	for _, source := range sources {
+		var label string
+		var run func(*tui.Task) error
+
 		switch source.Name() {
 		case "Apt":
-			fmt.Println("🧹 Cleaning Apt cache...")
-			elevator := utils.NewElevator()
-			elevator.RunPrivileged("apt", "clean")
-		case "Flatpak":
-			fmt.Println("🧹 Cleaning Flatpak cache...")
-			exec.Command("flatpak", "uninstall", "--user", "--unused", "-y").Run()
+			label = "Cleaning Apt cache"
+			run = func(t *tui.Task) error {
+				e := utils.NewElevator()
+				t.SetLabel("Cleaning Apt cache")
+				return e.RunPrivilegedStreaming("apt", []string{"clean"}, t.AppendOutput)
+			}
 		case "Pacman":
-			fmt.Println("🧹 Cleaning Pacman cache...")
-			elevator := utils.NewElevator()
-			elevator.RunPrivileged("pacman", "-Sc", "--noconfirm")
+			label = "Cleaning Pacman cache"
+			run = func(t *tui.Task) error {
+				e := utils.NewElevator()
+				t.SetLabel("Cleaning Pacman cache")
+				return e.RunPrivilegedStreaming("pacman", []string{"-Sc", "--noconfirm"}, t.AppendOutput)
+			}
 		case "Paru":
-			fmt.Println("🧹 Cleaning Paru cache...")
-			exec.Command("paru", "-Sc", "--noconfirm").Run()
+			label = "Cleaning Paru cache"
+			run = func(t *tui.Task) error {
+				t.SetLabel("Cleaning Paru cache")
+				return utils.RunCommandStreaming("paru", []string{"-Sc", "--noconfirm"}, t.AppendOutput)
+			}
 		case "Yay":
-			fmt.Println("🧹 Cleaning Yay cache...")
-			exec.Command("yay", "-Sc", "--noconfirm").Run()
+			label = "Cleaning Yay cache"
+			run = func(t *tui.Task) error {
+				t.SetLabel("Cleaning Yay cache")
+				return utils.RunCommandStreaming("yay", []string{"-Sc", "--noconfirm"}, t.AppendOutput)
+			}
 		case "DNF":
-			fmt.Println("🧹 Cleaning DNF cache...")
-			elevator := utils.NewElevator()
-			elevator.RunPrivileged("dnf", "clean", "all")
-		case "Alpine":
-			fmt.Println("🧹 Cleaning Alpine cache...")
-			elevator := utils.NewElevator()
-			elevator.RunPrivileged("rm", "-rf", "/var/cache/apk/*")
-		case "XBPS":
-			fmt.Println("🧹 Cleaning XBPS cache...")
-			elevator := utils.NewElevator()
-			elevator.RunPrivileged("xbps-remove", "-O")
-		case "Pacstall":
-			fmt.Println("🧹 Cleaning Pacstall cache...")
-			elevator := utils.NewElevator()
-			elevator.RunPrivileged("pacstall", "-C")
-		case "Nix":
-			fmt.Println("⚠️  No automatic clean command available for Nix.")
-		case "FreeBSD", "FreeBSD Ports", "OpenBSD", "OpenBSD Ports":
-			fmt.Printf("⚠️  No automatic clean command available for %s.\n", source.Name())
+			label = "Cleaning DNF cache"
+			run = func(t *tui.Task) error {
+				e := utils.NewElevator()
+				t.SetLabel("Cleaning DNF cache")
+				return e.RunPrivilegedStreaming("dnf", []string{"clean", "all"}, t.AppendOutput)
+			}
+		case "Flatpak":
+			label = "Cleaning Flatpak cache"
+			run = func(t *tui.Task) error {
+				t.SetLabel("Cleaning Flatpak cache")
+				return utils.RunCommandStreaming("flatpak", []string{"uninstall", "--user", "--unused", "-y"}, t.AppendOutput)
+			}
 		default:
-			fmt.Printf("⚠️ No automatic clean command available for %s.\n", source.Name())
+			continue
 		}
+
+		ops = append(ops, tui.Op{Label: label, Run: run})
 	}
+
+	if len(ops) == 0 {
+		fmt.Println("No cleanable sources enabled.")
+		return
+	}
+	runOps("pkgz clean", ops)
 }

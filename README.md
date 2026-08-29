@@ -107,6 +107,17 @@ The script will ask you to select:
 **Output**: Creates a compressed binary in `build/{OS}/{ARCH}/`
 - Binary: `build/{OS}/{ARCH}/pkgz.gz` (extracts to 'pkgz')
 
+For a quick non-interactive host build that also produces `.tar.gz` and `.deb` packages:
+
+```bash
+./build.sh --dev
+```
+
+**Output**:
+- Binary: `build/{OS}/{ARCH}/pkgz`
+- Tarball: `build/{OS}/{ARCH}/pkgz-v{VERSION}-{OS}-{ARCH}.tar.gz`
+- Debian package: `build/{OS}/{ARCH}/pkgz_{VERSION}_{arch}.deb` (Linux only)
+
 ---
 
 ### 📦 Install the Binary

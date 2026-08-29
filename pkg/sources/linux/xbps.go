@@ -43,6 +43,31 @@ func (x *XbpsSource) Update() error {
 	return x.elevator.RunPrivileged("xbps-install", "-Syu")
 }
 
+func (x *XbpsSource) ListUpdates() ([]string, error) {
+	output, err := utils.RunCommand("xbps-install", "-un")
+	if err != nil && strings.TrimSpace(output) == "" {
+		return nil, nil
+	}
+
+	var updates []string
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		name := strings.Trim(fields[0], "[]")
+		if idx := strings.LastIndex(name, "-"); idx > 0 {
+			name = name[:idx]
+		}
+		updates = append(updates, name)
+	}
+	return updates, nil
+}
+
 func (x *XbpsSource) Search(app string) (bool, error) {
 	output, err := utils.RunCommand("xbps-query", "-Rs", app)
 	if err != nil {

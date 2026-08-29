@@ -43,6 +43,27 @@ func (p *PacmanSource) Update() error {
 	return p.elevator.RunPrivileged("pacman", "-Syu", "--noconfirm")
 }
 
+func (p *PacmanSource) ListUpdates() ([]string, error) {
+	output, err := utils.RunCommand("pacman", "-Qu")
+	if err != nil && strings.TrimSpace(output) == "" {
+		return nil, nil
+	}
+
+	var updates []string
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		updates = append(updates, fields[0])
+	}
+	return updates, nil
+}
+
 func (p *PacmanSource) Search(app string) (bool, error) {
 	output, err := utils.RunCommand("pacman", "-Ss", app)
 	if err != nil {

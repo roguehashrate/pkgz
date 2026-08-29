@@ -49,6 +49,28 @@ func (y *YaySource) Update() error {
 	return err
 }
 
+func (y *YaySource) ListUpdates() ([]string, error) {
+	output, err := utils.RunCommand("yay", "-Qua")
+	if err != nil && strings.TrimSpace(output) == "" {
+		return nil, nil
+	}
+
+	var updates []string
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "::") ||
+			strings.HasPrefix(line, "warning") || strings.HasPrefix(line, "error") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		updates = append(updates, fields[0])
+	}
+	return updates, nil
+}
+
 func (y *YaySource) Search(app string) (bool, error) {
 	output, err := utils.RunCommand("yay", "-Ss", app)
 	if err != nil {

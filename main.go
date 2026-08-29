@@ -18,7 +18,7 @@ const VERSION = "0.1.9"
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: pkgz <install|remove|update|search|--version> [app-name]")
+		fmt.Println("Usage: pkgz <install|remove|update|refresh|search|--version> [app-name]")
 		os.Exit(1)
 	}
 
@@ -105,6 +105,8 @@ func main() {
 		handleRemove(appName, sources)
 	case "update":
 		handleUpdate(sources)
+	case "refresh":
+		handleRefresh(sources)
 	case "search":
 		handleSearch(appName, sources)
 	case "info":
@@ -113,7 +115,7 @@ func main() {
 		handleClean(sources)
 	default:
 		fmt.Printf("Unknown command: %s\n", command)
-		fmt.Println("Usage: pkgz <install|remove|update|search|clean|info|--version> [app-name]")
+		fmt.Println("Usage: pkgz <install|remove|update|refresh|search|clean|info|--version> [app-name]")
 		os.Exit(1)
 	}
 }
@@ -126,6 +128,7 @@ type Source interface {
 	Install(app string) error
 	Remove(app string) error
 	Update() error
+	ListUpdates() ([]string, error)
 	Search(app string) (bool, error)
 	InstalledCount() (int, error)
 }
@@ -237,6 +240,24 @@ func handleUpdate(sources []Source) {
 		fmt.Printf("⬆️ Updating %s packages...\n", source.Name())
 		if err := source.Update(); err != nil {
 			fmt.Printf("❌ Update failed for %s: %v\n", source.Name(), err)
+		}
+	}
+}
+
+func handleRefresh(sources []Source) {
+	for _, source := range sources {
+		fmt.Printf("🔄 Checking %s for updates...\n", source.Name())
+		updates, err := source.ListUpdates()
+		if err != nil {
+			fmt.Printf("❌ Update check failed for %s: %v\n", source.Name(), err)
+			continue
+		}
+		if len(updates) == 0 {
+			continue
+		}
+		fmt.Printf("⬆️ %s has %d update(s) available:\n", source.Name(), len(updates))
+		for _, pkg := range updates {
+			fmt.Printf("  - %s\n", pkg)
 		}
 	}
 }

@@ -77,6 +77,31 @@ func (n *NixSource) Update() error {
 	return err
 }
 
+func (n *NixSource) ListUpdates() ([]string, error) {
+	output, err := utils.RunCommand("nix-env", "-q", "--upgrades")
+	if err != nil && strings.TrimSpace(output) == "" {
+		return nil, nil
+	}
+
+	var updates []string
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || !strings.Contains(line, "->") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		name := fields[0]
+		if idx := strings.LastIndex(name, "-"); idx > 0 {
+			name = name[:idx]
+		}
+		updates = append(updates, name)
+	}
+	return updates, nil
+}
+
 func (n *NixSource) Search(app string) (bool, error) {
 	output, err := utils.RunCommand("nix", "search", app)
 	if err != nil {

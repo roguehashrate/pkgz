@@ -9,7 +9,7 @@
 
 ## ✨ Features
 
-- ✅ Install, remove, update and search apps  
+- ✅ Install, remove, update, refresh and search apps  
 - 🔍 Interactive source selection if app is available in multiple sources  
 - 🔐 Automatically uses `doas` or `sudo` for privilege elevation  
 - 📦 Supports:
@@ -151,7 +151,8 @@ pkgz remove gimp
 pkgz clean
 pkgz info          # Show package counts per source
 pkgz info gimp      # Show specific package status
-pkgz update
+pkgz refresh        # Check for available updates without installing them
+pkgz update         # Apply all available updates
 pkgz --version
 ```
 

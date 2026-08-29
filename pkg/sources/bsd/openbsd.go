@@ -45,6 +45,11 @@ func (o *OpenBsdSource) Update() error {
 	return nil
 }
 
+func (o *OpenBsdSource) ListUpdates() ([]string, error) {
+	fmt.Println("⚠️  Please use `syspatch` or the ports tree for updates on OpenBSD.")
+	return nil, nil
+}
+
 func (o *OpenBsdSource) Search(app string) (bool, error) {
 	output, err := utils.RunCommand("pkg_info", "|", "grep", app)
 	if err != nil {

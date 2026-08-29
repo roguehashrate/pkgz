@@ -63,6 +63,12 @@ func (x *XbpsSrcSource) Update() error {
 	return nil
 }
 
+func (x *XbpsSrcSource) ListUpdates() ([]string, error) {
+	fmt.Println("⚠️  xbps-src does not support mass updates.")
+	fmt.Println("Use: pkgz install <pkg> to rebuild when needed.")
+	return nil, nil
+}
+
 func (x *XbpsSrcSource) Search(app string) (bool, error) {
 	srcpkgDir := filepath.Join(x.voidPkgs, "srcpkgs")
 

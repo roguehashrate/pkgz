@@ -43,6 +43,33 @@ func (z *ZypperSource) Update() error {
 	return z.elevator.RunPrivileged("sh", "-c", "zypper refresh && zypper update -y")
 }
 
+func (z *ZypperSource) ListUpdates() ([]string, error) {
+	output, err := utils.RunCommand("zypper", "list-updates", "--no-refresh")
+	if err != nil && strings.TrimSpace(output) == "" {
+		return nil, nil
+	}
+
+	var updates []string
+	for _, line := range strings.Split(output, "\n") {
+		parts := strings.Split(line, "|")
+		if len(parts) < 4 {
+			continue
+		}
+		status := strings.TrimSpace(parts[0])
+		name := strings.TrimSpace(parts[2])
+		if status == "" || name == "" {
+			continue
+		}
+		if status == "S" || strings.HasPrefix(status, "-") {
+			continue
+		}
+		if strings.Contains(status, "+") {
+			updates = append(updates, name)
+		}
+	}
+	return updates, nil
+}
+
 func (z *ZypperSource) Search(app string) (bool, error) {
 	output, err := utils.RunCommand("zypper", "search", app)
 	if err != nil {

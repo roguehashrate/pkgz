@@ -48,6 +48,27 @@ func (f *FreeBsdSource) Update() error {
 	return f.elevator.RunPrivileged("pkg", "upgrade", "-y")
 }
 
+func (f *FreeBsdSource) ListUpdates() ([]string, error) {
+	output, err := utils.RunCommand("pkg", "version", "-l", "<")
+	if err != nil && strings.TrimSpace(output) == "" {
+		return nil, nil
+	}
+
+	var updates []string
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasSuffix(line, "<") {
+			continue
+		}
+		name := strings.TrimSpace(strings.TrimSuffix(line, "<"))
+		if idx := strings.LastIndex(name, "-"); idx > 0 {
+			name = name[:idx]
+		}
+		updates = append(updates, name)
+	}
+	return updates, nil
+}
+
 func (f *FreeBsdSource) Search(app string) (bool, error) {
 	output, err := utils.RunCommand("pkg", "search", app)
 	if err != nil {

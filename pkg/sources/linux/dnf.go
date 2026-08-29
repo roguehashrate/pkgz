@@ -43,6 +43,30 @@ func (d *DnfSource) Update() error {
 	return d.elevator.RunPrivileged("dnf", "upgrade", "-y")
 }
 
+func (d *DnfSource) ListUpdates() ([]string, error) {
+	output, err := utils.RunCommand("dnf", "check-update")
+	if err != nil && strings.TrimSpace(output) == "" {
+		return nil, nil
+	}
+
+	var updates []string
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "Last metadata") ||
+			strings.HasPrefix(line, "Upgrade") || strings.HasPrefix(line, "Downgrade") ||
+			strings.HasPrefix(line, "Installing") || strings.HasPrefix(line, "Removing") ||
+			strings.HasPrefix(line, "Package") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 3 {
+			continue
+		}
+		updates = append(updates, fields[0])
+	}
+	return updates, nil
+}
+
 func (d *DnfSource) Search(app string) (bool, error) {
 	output, err := utils.RunCommand("dnf", "search", app)
 	if err != nil {

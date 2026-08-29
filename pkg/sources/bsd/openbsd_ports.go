@@ -48,6 +48,11 @@ func (o *OpenBsdPortsSource) Update() error {
 	return nil
 }
 
+func (o *OpenBsdPortsSource) ListUpdates() ([]string, error) {
+	fmt.Println("⚠️  Update the ports tree manually via 'svn update /usr/ports' or git.")
+	return nil, nil
+}
+
 func (o *OpenBsdPortsSource) Search(app string) (bool, error) {
 	portsDir := "/usr/ports"
 

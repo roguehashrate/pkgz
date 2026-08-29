@@ -87,6 +87,28 @@ func (f *FlatpakSource) Update() error {
 	return err
 }
 
+func (f *FlatpakSource) ListUpdates() ([]string, error) {
+	output, err := utils.RunCommand("flatpak", "remote-ls", "--user", "--updates")
+	if err != nil && strings.TrimSpace(output) == "" {
+		return nil, nil
+	}
+
+	var updates []string
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		line = strings.TrimPrefix(line, "app/")
+		line = strings.TrimPrefix(line, "runtime/")
+		if idx := strings.Index(line, "/"); idx > 0 {
+			line = line[:idx]
+		}
+		updates = append(updates, line)
+	}
+	return updates, nil
+}
+
 func (f *FlatpakSource) Search(app string) (bool, error) {
 	output, err := utils.RunCommand("flatpak", "search", "--columns=name", app)
 	if err != nil {

@@ -46,6 +46,11 @@ func (f *FreeBsdPortsSource) Update() error {
 	return nil
 }
 
+func (f *FreeBsdPortsSource) ListUpdates() ([]string, error) {
+	fmt.Println("⚠️  FreeBSD Ports must be updated manually via 'portsnap fetch update' or git.")
+	return nil, nil
+}
+
 func (f *FreeBsdPortsSource) Search(app string) (bool, error) {
 	output, err := utils.RunCommand("make", "-C", "/usr/ports/", "search", "key="+app, "2>/dev/null")
 	if err != nil {

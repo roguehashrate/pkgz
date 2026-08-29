@@ -8,6 +8,7 @@ type Source interface {
 	Install(app string) error
 	Remove(app string) error
 	Update() error
+	ListUpdates() ([]string, error)
 	Search(app string) (bool, error)
 	InstalledCount() (int, error)
 }

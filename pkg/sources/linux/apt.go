@@ -43,6 +43,31 @@ func (a *AptSource) Update() error {
 	return a.elevator.RunPrivileged("sh", "-c", "apt update && apt upgrade -y")
 }
 
+func (a *AptSource) ListUpdates() ([]string, error) {
+	output, err := utils.RunCommand("apt", "list", "--upgradable")
+	if err != nil && strings.TrimSpace(output) == "" {
+		return nil, nil
+	}
+
+	var updates []string
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "Listing") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		name := fields[0]
+		if idx := strings.Index(name, "/"); idx > 0 {
+			name = name[:idx]
+		}
+		updates = append(updates, name)
+	}
+	return updates, nil
+}
+
 func (a *AptSource) Search(app string) (bool, error) {
 	output, err := utils.RunCommand("apt-cache", "search", app)
 	if err != nil {

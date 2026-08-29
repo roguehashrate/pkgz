@@ -1,6 +1,7 @@
 package linux
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/roguehashrate/pkgz/pkg/sources"
@@ -53,6 +54,11 @@ func (p *PacstallSource) Remove(app string) error {
 
 func (p *PacstallSource) Update() error {
 	return p.elevator.RunPrivileged("pacstall", "-Up")
+}
+
+func (p *PacstallSource) ListUpdates() ([]string, error) {
+	fmt.Println("⚠️  Pacstall does not support listing available updates.")
+	return nil, nil
 }
 
 func (p *PacstallSource) Search(app string) (bool, error) {

@@ -43,6 +43,40 @@ func (a *ApkSource) Update() error {
 	return a.elevator.RunPrivileged("sh", "-c", "apk update && apk upgrade")
 }
 
+func (a *ApkSource) ListUpdates() ([]string, error) {
+	output, err := utils.RunCommand("apk", "list", "--upgradable")
+	if err != nil && strings.TrimSpace(output) == "" {
+		return nil, nil
+	}
+
+	var updates []string
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if start := strings.Index(line, "{"); start >= 0 {
+			if end := strings.Index(line[start:], "}"); end > 0 {
+				name := line[start+1 : start+end]
+				if name != "" {
+					updates = append(updates, name)
+					continue
+				}
+			}
+		}
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		name := fields[0]
+		if idx := strings.LastIndex(name, "-"); idx > 0 {
+			name = name[:idx]
+		}
+		updates = append(updates, name)
+	}
+	return updates, nil
+}
+
 func (a *ApkSource) Search(app string) (bool, error) {
 	output, err := utils.RunCommand("apk", "search", app)
 	if err != nil {

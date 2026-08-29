@@ -49,6 +49,28 @@ func (p *ParuSource) Update() error {
 	return err
 }
 
+func (p *ParuSource) ListUpdates() ([]string, error) {
+	output, err := utils.RunCommand("paru", "-Qua")
+	if err != nil && strings.TrimSpace(output) == "" {
+		return nil, nil
+	}
+
+	var updates []string
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "::") ||
+			strings.HasPrefix(line, "warning") || strings.HasPrefix(line, "error") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		updates = append(updates, fields[0])
+	}
+	return updates, nil
+}
+
 func (p *ParuSource) Search(app string) (bool, error) {
 	output, err := utils.RunCommand("paru", "-Ss", app)
 	if err != nil {

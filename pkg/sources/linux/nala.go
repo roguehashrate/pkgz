@@ -43,6 +43,31 @@ func (n *NalaSource) Update() error {
 	return n.elevator.RunPrivileged("sh", "-c", "nala update && nala upgrade -y")
 }
 
+func (n *NalaSource) ListUpdates() ([]string, error) {
+	output, err := utils.RunCommand("apt", "list", "--upgradable")
+	if err != nil && strings.TrimSpace(output) == "" {
+		return nil, nil
+	}
+
+	var updates []string
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "Listing") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		name := fields[0]
+		if idx := strings.Index(name, "/"); idx > 0 {
+			name = name[:idx]
+		}
+		updates = append(updates, name)
+	}
+	return updates, nil
+}
+
 func (n *NalaSource) Search(app string) (bool, error) {
 	output, err := utils.RunCommand("nala", "search", app)
 	if err != nil {

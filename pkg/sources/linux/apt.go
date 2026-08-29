@@ -48,24 +48,25 @@ func (a *AptSource) ListUpdates() ([]string, error) {
 	if err != nil && strings.TrimSpace(output) == "" {
 		return nil, nil
 	}
+	return parseAptUpgradable(output), nil
+}
 
+func parseAptUpgradable(output string) []string {
 	var updates []string
 	for _, line := range strings.Split(output, "\n") {
 		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "Listing") {
+		if line == "" || strings.HasPrefix(line, "WARNING") ||
+			strings.HasPrefix(line, "Notice") || strings.HasPrefix(line, "Listing") {
 			continue
 		}
 		fields := strings.Fields(line)
-		if len(fields) == 0 {
+		if len(fields) == 0 || !strings.Contains(fields[0], "/") {
 			continue
 		}
-		name := fields[0]
-		if idx := strings.Index(name, "/"); idx > 0 {
-			name = name[:idx]
-		}
+		name := fields[0][:strings.Index(fields[0], "/")]
 		updates = append(updates, name)
 	}
-	return updates, nil
+	return updates
 }
 
 func (a *AptSource) Search(app string) (bool, error) {

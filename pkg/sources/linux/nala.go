@@ -48,24 +48,7 @@ func (n *NalaSource) ListUpdates() ([]string, error) {
 	if err != nil && strings.TrimSpace(output) == "" {
 		return nil, nil
 	}
-
-	var updates []string
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "Listing") {
-			continue
-		}
-		fields := strings.Fields(line)
-		if len(fields) == 0 {
-			continue
-		}
-		name := fields[0]
-		if idx := strings.Index(name, "/"); idx > 0 {
-			name = name[:idx]
-		}
-		updates = append(updates, name)
-	}
-	return updates, nil
+	return parseAptUpgradable(output), nil
 }
 
 func (n *NalaSource) Search(app string) (bool, error) {

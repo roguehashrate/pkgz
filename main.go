@@ -14,7 +14,7 @@ import (
 	"github.com/roguehashrate/pkgz/pkg/utils"
 )
 
-const VERSION = "0.1.9"
+const VERSION = "1.0.0"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -49,6 +49,9 @@ func main() {
 
 	if enabledSources["apt"] {
 		sources = append(sources, linux.NewAptSource(elevator))
+	}
+	if enabledSources["nala"] {
+		sources = append(sources, linux.NewNalaSource(elevator))
 	}
 	if enabledSources["flatpak"] {
 		sources = append(sources, linux.NewFlatpakSource(elevator))

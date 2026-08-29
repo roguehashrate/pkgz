@@ -3,7 +3,7 @@ package config
 import "os"
 
 const (
-	VERSION     = "0.1.9"
+	VERSION     = "1.0.0"
 	CONFIG_PATH = "~/.config/pkgz/config.toml"
 )
 

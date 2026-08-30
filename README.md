@@ -10,7 +10,7 @@
 ## ✨ Features
 
 - ✅ Install, remove, update, refresh and search apps  
-- 🖥️ Custom TUI (bubbletea) that drives `update`/`install`/`remove`/`clean` in a single unified interface — per-source status, live spinner, and a scrollable output pane — instead of each package manager taking over your terminal.
+- 🖥️ Custom TUI (bubbletea) that drives every operation (`install`, `remove`, `update`, `refresh`, `search`, `info`, `clean`) in a single unified interface — per-source status, live spinner, and a scrollable output pane — instead of each package manager taking over your terminal.
 - 🔍 Interactive source selection if app is available in multiple sources  
 - 🔐 Automatically uses `doas` or `sudo` for privilege elevation  
 - 📦 Supports:
@@ -155,18 +155,7 @@ pkgz update         # Apply all available updates
 pkgz --version
 ```
 
-Sample output:
-
-```
-$ pkgz install gimp
-🔍 Searching for 'gimp' in sources...
-📦 Found 'gimp' in multiple sources:
-1. APT
-2. Flatpak
-Which one would you like to use? [1-2]: 2
-```
-
-When you run `pkgz update` (or an install/remove/clean in a terminal), a TUI appears showing each enabled source with its status and live output:
+When you run any command, pkgz opens its TUI showing each enabled source with its status and live output. For example `pkgz update`:
 
 ```
 ╭─────────────╮
@@ -174,23 +163,87 @@ When you run `pkgz update` (or an install/remove/clean in a terminal), a TUI app
 ╰─────────────╯
 
 ● ⣻ ▸ Updating Apt
-✓ Updating Flatpak
-○ Updating Pacman
+✓   Updating Flatpak
+○   Updating DNF
+○   Updating Pacman
 
 Running...
 
 ↑/↓ select task · o toggle log · q quit
 ```
 
+Status markers:
+- `●` running (active task) · `✓` done · `▲` updates available (shown with a count) · `✗` failed · `○` not yet started
+
+For a status check, `pkgz refresh` marks each source with `✓`/`▲`/`✗` and puts the count right in the label:
+
+```
+╭───────────────╮
+│ pkgz refresh  │
+╰───────────────╯
+
+✓   Checking Apt — up to date
+▲   Checking Pacman — 3 update(s)
+✗   Checking DNF
+
+2 done · 1 failed — finished with errors.
+
+o toggle log · any other key to exit
+```
+
+When all tasks finish, pkgz stays on a summary screen until you dismiss it. For `pkgz update`:
+
+```
+╭─────────────╮
+│ pkgz update │
+╰─────────────╯
+
+✓   Updating Apt
+✓   Updating Flatpak
+✗   Updating Pacman
+✓   Updating DNF
+
+3 done · 1 failed — finished with errors.
+
+o toggle log · any other key to exit
+```
+
+When an app is available from multiple sources (e.g. emacs in both Apt and Flatpak), `pkgz install` shows a picker first so you can choose the source, then runs the install in the same window:
+
+```
+╭─────────────────────────╮
+│ pkgz install emacs      │
+╰─────────────────────────╯
+
+'emacs' is available via multiple sources. Choose one:
+
+▸ Apt
+  Flatpak
+
+↑/↓ move · enter select · q quit
+```
+
 **TUI controls:**
+
+*During the run:*
 - `↑`/`↓` (or `←`/`→`) — select a source / move between entries
 - `enter` (or `space`) — confirm a selection (e.g. which source to install from)
 - `o` — toggle the captured-output log pane
 - `q`, `esc`, or `Ctrl+C` — quit
 
-When an app is available from multiple sources (e.g. emacs in both Apt and Flatpak), `pkgz install` shows a picker inside the TUI so you can choose the source with arrow keys and `enter`, then it runs the install in the same window.
+*On the done/summary screen:*
+- `o` — keep toggling the captured-output log pane (does **not** quit)
+- `q`, `esc`, `Ctrl+C`, `enter` — or any other key — return to the shell
 
-When stdout is not a terminal (e.g. `pkgz update | tee log`), pkgz falls back to plain console output automatically.
+**Non-TTY fallback:** when stdout is not a terminal (e.g. `pkgz update | tee log`, pipes, scripts, CI), pkgz falls back to plain console output automatically. For a multi-source `install`/`remove` in that case, it shows a plain numbered prompt instead of the TUI picker:
+
+```
+$ pkgz install gimp
+⚠️ 'gimp' is available via multiple sources:
+1. APT
+2. Flatpak
+Which one would you like to use? [1-2]: 2
+```
 
 ---
 
@@ -205,7 +258,7 @@ When stdout is not a terminal (e.g. `pkgz update | tee log`), pkgz falls back to
 
 To add support for a new package manager:
 
-1. Implement the `Source` interface (see `main.go`):
+1. Implement the `Source` interface (see `pkg/sources/interface.go`):
    - `Name() string`
    - `Available(app string) (bool, error)`
    - `Installed(app string) (bool, error)`
@@ -215,8 +268,8 @@ To add support for a new package manager:
    - `ListUpdates() ([]string, error)`
    - `Search(app string) (bool, error)`
    - `InstalledCount() (int, error)`
-   - `SetTask(utils.Task)` — optional hook so run-time output streams into the TUI
-2. Add your source to `main.go`'s enabled-sources list and to the config.
+2. Optionally implement `SetTask(utils.Task)` on your source so run-time output streams into the TUI (pkgz type-asserts for it via `withTask`; it is not part of the `Source` interface).
+3. Add your source to `main.go`'s enabled-sources list and to the config.
 
 ---
 

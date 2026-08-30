@@ -26,6 +26,13 @@ type commandSource struct {
 	listUpdates    func() ([]string, error)
 	search         func(app string) (bool, error)
 	installedCount func() (int, error)
+
+	// Privilege flags: whether each op escalates privileges (e.g. via
+	// sudo/doas), which means the TUI must release the terminal so password
+	// prompts work. Left false for sources that run as the plain user.
+	installPrivileged bool
+	removePrivileged  bool
+	updatePrivileged  bool
 }
 
 var _ sources.Source = (*commandSource)(nil)
@@ -40,6 +47,12 @@ func (c *commandSource) ListUpdates() ([]string, error)     { return c.listUpdat
 func (c *commandSource) Search(app string) (bool, error)    { return c.search(app) }
 func (c *commandSource) InstalledCount() (int, error)       { return c.installedCount() }
 
+// Privilege getters let the UI decide whether to run an op with direct terminal
+// control (to accept sudo/doas passwords).
+func (c *commandSource) InstallPrivileged() bool { return c.installPrivileged }
+func (c *commandSource) RemovePrivileged() bool  { return c.removePrivileged }
+func (c *commandSource) UpdatePrivileged() bool  { return c.updatePrivileged }
+
 // SetTask attaches a reporting hook for streaming status/output.
 func (c *commandSource) SetTask(t utils.Task) { c.task = t }
 
@@ -49,8 +62,12 @@ func (c *commandSource) reportLine(line string) {
 	}
 }
 
-// runOp executes a (possibly privileged) command, streaming its output into the
-// attached task. When privileged, stdin is forwarded for sudo/doas prompts.
+// runOp executes a (possibly privileged) command. Both paths stream their
+// combined output into the attached task so it is surfaced inside the TUI's log
+// pane rather than dumped to the terminal. Privileged commands keep stdin
+// attached (via the used streaming helper) so sudo/doas can still prompt for a
+// password; in the TUI they run inside bubbletea's Exec, which releases the
+// terminal for the duration of the prompt.
 func (c *commandSource) runOp(e *utils.Elevator, privileged bool, bin string, args []string) error {
 	if privileged {
 		return e.RunPrivilegedStreaming(bin, args, c.reportLine)

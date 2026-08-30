@@ -30,6 +30,10 @@ func NewNalaSource(elevator *utils.Elevator) sources.Source {
 			return []string{"search", app}
 		}),
 		installedCount: countOutput("dpkg-query", "-f", ".\n", "-W"),
+
+		installPrivileged: true,
+		removePrivileged:  true,
+		updatePrivileged:  true,
 	}
 	return c
 }

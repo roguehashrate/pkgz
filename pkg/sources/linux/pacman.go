@@ -32,6 +32,10 @@ func NewPacmanSource(elevator *utils.Elevator) sources.Source {
 			return []string{"-Ss", app}
 		}),
 		installedCount: countOutput("pacman", "-Qn"),
+
+		installPrivileged: true,
+		removePrivileged:  true,
+		updatePrivileged:  true,
 	}
 	return c
 }

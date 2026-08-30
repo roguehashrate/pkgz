@@ -32,6 +32,10 @@ func NewZypperSource(elevator *utils.Elevator) sources.Source {
 			return []string{"search", app}
 		}),
 		installedCount: countOutput("rpm", "-qa"),
+
+		installPrivileged: true,
+		removePrivileged:  true,
+		updatePrivileged:  true,
 	}
 	return c
 }

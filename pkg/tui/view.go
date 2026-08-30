@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -41,6 +42,8 @@ func statusMark(status string) string {
 		return "✓"
 	case "failed":
 		return "✗"
+	case "updates":
+		return "▲"
 	default:
 		return "○"
 	}
@@ -54,6 +57,8 @@ func statusColor(status string) lipgloss.Color {
 		return lipgloss.Color("42")
 	case "failed":
 		return lipgloss.Color("196")
+	case "updates":
+		return lipgloss.Color("220")
 	default:
 		return lipgloss.Color("240")
 	}
@@ -78,16 +83,32 @@ func (m *Model) View() string {
 
 	b.WriteString("\n\n")
 
-	if m.done && m.err != nil {
-		b.WriteString(statusBarStyle.Render("Finished with errors.") + "\n")
-	} else if m.done {
-		b.WriteString(statusBarStyle.Render("All done.") + "\n")
+	if m.done {
+		doneCount, failCount := m.countResults()
+		var summary string
+		switch {
+		case failCount > 0:
+			summary = statusBarStyle.Render(
+				fmt.Sprintf("%d done · %d failed — finished with errors.", doneCount, failCount),
+			)
+		case doneCount > 0:
+			summary = statusBarStyle.Render(
+				fmt.Sprintf("%d %s — all done.", doneCount, plural("operation", doneCount)),
+			)
+		default:
+			summary = statusBarStyle.Render("Nothing to do.")
+		}
+		b.WriteString(summary + "\n")
 	} else {
 		b.WriteString(statusBarStyle.Render("Running..."))
 	}
 
 	b.WriteString("\n\n")
-	b.WriteString(infoStyle.Render(helpText))
+	if m.done {
+		b.WriteString(infoStyle.Render(doneHelpText))
+	} else {
+		b.WriteString(infoStyle.Render(helpText))
+	}
 
 	if m.showLog {
 		b.WriteString("\n\n")
@@ -95,6 +116,21 @@ func (m *Model) View() string {
 	}
 
 	return b.String()
+}
+
+// countResults tallies how many tasks finished successfully vs. failed.
+// "updates" is a successful check (the user just decides not to apply), so it
+// counts as done alongside "done".
+func (m *Model) countResults() (done, failed int) {
+	for _, t := range m.tasks {
+		switch t.Status() {
+		case "done", "updates":
+			done++
+		case "failed":
+			failed++
+		}
+	}
+	return done, failed
 }
 
 func (m *Model) renderRow(idx int, t *Task) string {
@@ -146,7 +182,16 @@ func (m *Model) logWidth() int {
 
 const helpText = "↑/↓ select task · o toggle log · q quit"
 
+const doneHelpText = "o toggle log · any other key to exit"
+
 const pickerHelpText = "↑/↓ move · enter select · q quit"
+
+func plural(word string, n int) string {
+	if n == 1 {
+		return word
+	}
+	return word + "s"
+}
 
 func (m *Model) renderPicker() string {
 	var b strings.Builder

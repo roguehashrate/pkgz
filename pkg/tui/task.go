@@ -22,11 +22,8 @@ type Task struct {
 	send func(tea.Msg)
 }
 
-func newTask(id int, label string, send func(tea.Msg)) *Task {
-	if send == nil {
-		send = func(tea.Msg) {}
-	}
-	return &Task{id: id, label: label, status: "pending", send: send}
+func newTask(id int, label string) *Task {
+	return &Task{id: id, label: label, status: "pending", send: func(tea.Msg) {}}
 }
 
 func (t *Task) ID() int { return t.id }

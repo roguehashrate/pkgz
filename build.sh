@@ -5,7 +5,7 @@
 #   build.sh --dev    quick host build + .tar.gz and .deb packages
 set -e
 
-VERSION="1.0.1"
+VERSION="1.1.0"
 OUTPUT_DIR="build"
 BINARY_NAME="pkgz"
 

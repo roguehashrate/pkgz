@@ -14,7 +14,7 @@
 - 🔍 Interactive source selection if app is available in multiple sources  
 - 🔐 Automatically uses `doas` or `sudo` for privilege elevation  
 - 📦 Supports:
-  - Apt / Nala (Debian/Ubuntu)
+  - Apt (Debian/Ubuntu)
   - Flatpak
   - Pacman (Arch)
   - Paru (AUR helper)
@@ -35,7 +35,7 @@ To use **pkgz**, you’ll need the following:
   Either `sudo` or `doas` must be installed.
 
 - **At least one supported package manager:**  
-  `apt`, `nala`, `flatpak`, `pacman`, `paru`, `yay`, `dnf`, or `zypper`
+  `apt`, `flatpak`, `pacman`, `paru`, `yay`, `dnf`, or `zypper`
 
 - **Go compiler:**  
   Only needed if you're building from source.  
@@ -45,30 +45,28 @@ To use **pkgz**, you’ll need the following:
 
 ## ⚙️ Configuration
 
-Create or edit `~/.config/pkgz/config.toml`:
+On the **first run**, pkgz automatically detects the package managers installed on your system (apt, flatpak, pacman, paru, yay, dnf, zypper), picks a usable elevator (`doas` or `sudo`), and writes `~/.config/pkgz/config.toml` for you. You can edit it afterwards to enable/disable sources:
 
 ```toml
 # Enable/disable package manager sources
 [sources]
-apt = false
-nala = false
-flatpak = false
+apt = true       # enabled because apt was detected
+flatpak = true
 paru = false
 yay = false
 pacman = false
 dnf = false
 zypper = false
 
-# Privilege escalation method (required)
+# Privilege escalation method
 [elevator]
 command = "sudo"  # or "doas"
 ```
 
 **Configuration Notes:**
-- Only enable sources you actually use by setting them to `true`
-- You **must** have an elevator configured (`sudo` or `doas`)
-- The config file must be created manually before first run
-- The program will show a template if the config file is missing
+- Only sources whose binaries actually exist are used. If you enable a source whose package manager is not installed, pkgz prints a warning and skips it (it never reports phantom results for it).
+- The elevator command is honored as configured. If it can't be found, pkgz stops with a clear error instead of failing mid-operation.
+- No config file is required — the tool is usable as-is on first run.
 
 ---
 
@@ -146,14 +144,21 @@ Examples:
 
 ```bash
 pkgz install gimp
+pkgz install emacs --source flatpak   # pick the source explicitly
+pkgz install vim curl                  # install several packages at once
 pkgz remove gimp
 pkgz clean
 pkgz info          # Show package counts per source
 pkgz info gimp      # Show specific package status
 pkgz refresh        # Check for available updates without installing them
 pkgz update         # Apply all available updates
+pkgz search vim --source apt
 pkgz --version
 ```
+
+`--source NAME` (also accepted as `--from NAME`) skips the source picker, which makes
+pkgz deterministic for scripts and CI. Without it, pkgz shows the picker only when
+more than one source has the package; a single candidate runs directly.
 
 When you run any command, pkgz opens its TUI showing each enabled source with its status and live output. For example `pkgz update`:
 
@@ -235,7 +240,16 @@ When an app is available from multiple sources (e.g. emacs in both Apt and Flatp
 - `o` — keep toggling the captured-output log pane (does **not** quit)
 - `q`, `esc`, `Ctrl+C`, `enter` — or any other key — return to the shell
 
-**Non-TTY fallback:** when stdout is not a terminal (e.g. `pkgz update | tee log`, pipes, scripts, CI), pkgz falls back to plain console output automatically. For a multi-source `install`/`remove` in that case, it shows a plain numbered prompt instead of the TUI picker:
+**Exit codes:** pkgz exits `0` when every operation succeeded and `1` when anything
+failed (a rejected source choice, a package not found, a failed update/install,
+etc.), so scripts can rely on it.
+
+**Non-TTY fallback:** when stdout is not a terminal (e.g. `pkgz update | tee log`,
+pipes, scripts, CI), pkgz falls back to plain console output automatically. If the
+console is still interactive, a multi-source `install`/`remove` shows a plain
+numbered prompt. If input is not interactive either, pkgz lists the candidate
+sources and tells you to pick one with `--source`, so scripts never hang on a
+silent prompt:
 
 ```
 $ pkgz install gimp

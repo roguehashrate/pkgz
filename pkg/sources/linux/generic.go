@@ -1,6 +1,7 @@
 package linux
 
 import (
+	"fmt"
 	"os/exec"
 	"path/filepath"
 	"sort"
@@ -76,14 +77,14 @@ func (c *commandSource) runOp(e *utils.Elevator, privileged bool, bin string, ar
 }
 
 // availableContains builds an Available closure that reports whether `bin`
-// output contains the app string (case-sensitive, as the original did).
+// output contains the app string (case-insensitive, like the PMs themselves).
 func availableContains(bin string, args func(app string) []string) func(string) (bool, error) {
 	return func(app string) (bool, error) {
 		output, err := utils.RunCommand(bin, args(app)...)
 		if err != nil {
 			return false, nil
 		}
-		return strings.Contains(output, app), nil
+		return strings.Contains(strings.ToLower(output), strings.ToLower(app)), nil
 	}
 }
 
@@ -145,15 +146,35 @@ func listFirstField(output string, skip ...string) []string {
 	return updates
 }
 
+// noUpdateNonzeroExit lists binaries whose update-list query exits non-zero when
+// there is nothing to update (e.g. `pacman -Qu` returns 1 when up to date). For
+// these, a non-empty exit code with no parseable output is a clean "no updates",
+// not a failure.
+var noUpdateNonzeroExit = map[string]bool{
+	"pacman": true,
+	"paru":   true,
+	"yay":    true,
+}
+
 // listUpdatesCmd builds a ListUpdates closure running `bin args` and parsing
-// the output with parse.
+// the output with parse. Parseable packages win even when the command exits
+// non-zero (dnf returns 100 when updates exist). A genuine command failure with
+// no parseable output is surfaced as an error instead of being silently
+// reported as "up to date".
 func listUpdatesCmd(bin string, args []string, parse func(string) []string) func() ([]string, error) {
 	return func() ([]string, error) {
 		output, err := utils.RunCommand(bin, args...)
-		if err != nil && strings.TrimSpace(output) == "" {
-			return nil, nil
+		updates := parse(output)
+		if len(updates) > 0 {
+			return updates, nil
 		}
-		return parse(output), nil
+		if err != nil {
+			if noUpdateNonzeroExit[bin] {
+				return nil, nil
+			}
+			return nil, fmt.Errorf("%s failed: %w", bin, err)
+		}
+		return nil, nil
 	}
 }
 
@@ -202,17 +223,19 @@ func aptStatusLines() []string {
 // aptMatchPackages returns fully-installed package names that match app:
 // exactly equal to app, or starting with "<app>-" / "<app>." (e.g. emacs is
 // provided by emacs-gtk, emacs-common). This lets apt detect apps installed
-// via their Debian subpackages rather than an exact metapackage.
+// via their Debian subpackages rather than an exact metapackage. Matching is
+// case-insensitive because apt package names are lowercase.
 func aptMatchPackages(app string) []string {
 	var matches []string
-	prefix := app + "-"
+	lower := strings.ToLower(app)
+	prefix := lower + "-"
 	for _, line := range aptStatusLines() {
 		fields := strings.Fields(line)
 		if len(fields) < 2 || !strings.HasPrefix(fields[0], "ii") {
 			continue
 		}
-		pkg := fields[1]
-		if pkg == app || strings.HasPrefix(pkg, prefix) || strings.HasPrefix(pkg, app+".") {
+		pkg := strings.ToLower(fields[1])
+		if pkg == lower || strings.HasPrefix(pkg, prefix) || strings.HasPrefix(pkg, lower+".") {
 			matches = append(matches, pkg)
 		}
 	}
@@ -225,6 +248,9 @@ func aptAppInstalled(app string) bool {
 	if utils.RunCommandWithRedirect("dpkg", "-s", app) {
 		return true
 	}
+	if strings.ToLower(app) != app && utils.RunCommandWithRedirect("dpkg", "-s", strings.ToLower(app)) {
+		return true
+	}
 	return len(aptMatchPackages(app)) > 0
 }
 
@@ -235,6 +261,9 @@ func aptAppInstalled(app string) bool {
 func aptRemoveTarget(app string) string {
 	if utils.RunCommandWithRedirect("dpkg", "-s", app) {
 		return app
+	}
+	if strings.ToLower(app) != app && utils.RunCommandWithRedirect("dpkg", "-s", strings.ToLower(app)) {
+		return strings.ToLower(app)
 	}
 	matches := aptMatchPackages(app)
 	if len(matches) == 0 {

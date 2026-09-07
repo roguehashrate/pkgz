@@ -47,18 +47,26 @@ func RunPlain(ops []Op) error {
 	for i, op := range ops {
 		fmt.Printf("▶ %s\n", ops[i].Label)
 		t := newTask(i, ops[i].Label)
-		if err := op.Run(t); err != nil {
-			fmt.Printf("  ✗ %v\n", err)
-			if firstErr == nil {
-				firstErr = err
-			}
-		} else {
-			fmt.Printf("  ✓ done\n")
-		}
+		err := op.Run(t)
 		// Surface any detail the operation captured, so non-TTY output is not
 		// reduced to just "done".
 		for _, line := range t.Lines() {
 			fmt.Printf("  %s\n", line)
+		}
+		finalLabel := t.Label()
+		if err != nil {
+			fmt.Printf("  ✗ %v\n", err)
+		} else if finalLabel != ops[i].Label {
+			mark := "✓"
+			if t.Status() == "failed" {
+				mark = "✗"
+			}
+			fmt.Printf("  %s %s\n", mark, finalLabel)
+		} else {
+			fmt.Printf("  ✓ done\n")
+		}
+		if err != nil && firstErr == nil {
+			firstErr = err
 		}
 	}
 	return firstErr

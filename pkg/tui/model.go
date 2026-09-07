@@ -314,7 +314,14 @@ func (m *Model) runNext() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// setTaskResult marks a task finished. If the operation already set an explicit
+// terminal status ("done", "failed", "updates") it is left untouched so statuses
+// such as "▲ updates available" survive the completion message.
 func setTaskResult(t *Task, err error) {
+	switch t.Status() {
+	case "done", "failed", "updates":
+		return
+	}
 	if err != nil {
 		t.SetStatus("failed")
 	} else {

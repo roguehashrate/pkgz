@@ -44,10 +44,19 @@ func parseDnfUpdates(output string) []string {
 	var updates []string
 	for _, line := range strings.Split(output, "\n") {
 		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "Last metadata") ||
-			strings.HasPrefix(line, "Upgrade") || strings.HasPrefix(line, "Downgrade") ||
-			strings.HasPrefix(line, "Installing") || strings.HasPrefix(line, "Removing") ||
-			strings.HasPrefix(line, "Package") {
+		lower := strings.ToLower(line)
+		if line == "" ||
+			strings.HasPrefix(lower, "last metadata") ||
+			strings.HasPrefix(lower, "upgrade") ||
+			strings.HasPrefix(lower, "downgrade") ||
+			strings.HasPrefix(lower, "installing") ||
+			strings.HasPrefix(lower, "removing") ||
+			strings.HasPrefix(lower, "package") ||
+			strings.HasPrefix(lower, "error") ||
+			strings.HasPrefix(lower, "failed") ||
+			strings.HasPrefix(lower, "warning") ||
+			strings.Contains(lower, "metadata expiration") ||
+			strings.Contains(lower, "freeing read locks") {
 			continue
 		}
 		fields := strings.Fields(line)

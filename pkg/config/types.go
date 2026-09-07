@@ -3,7 +3,6 @@ package config
 import "os"
 
 const (
-	VERSION     = "1.1.0"
 	CONFIG_PATH = "~/.config/pkgz/config.toml"
 )
 
@@ -14,7 +13,6 @@ type Config struct {
 
 type SourcesConfig struct {
 	Apt     bool `toml:"apt"`
-	Nala    bool `toml:"nala"`
 	Flatpak bool `toml:"flatpak"`
 	Pacman  bool `toml:"pacman"`
 	Paru    bool `toml:"paru"`

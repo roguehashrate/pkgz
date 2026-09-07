@@ -117,3 +117,29 @@ func TestDonePhaseLogToggle(t *testing.T) {
 		t.Fatal("expected `q` to quit on the done screen")
 	}
 }
+
+// TestSetTaskResultKeepsExplicitStatus ensures an op that sets a terminal status
+// itself (like refresh's "updates" or "failed") is not overwritten by the
+// generic completion handler.
+func TestSetTaskResultKeepsExplicitStatus(t *testing.T) {
+	tt := newTask(0, "Checking Apt")
+	tt.SetStatus("updates")
+	setTaskResult(tt, nil)
+	if tt.Status() != "updates" {
+		t.Fatalf("status = %q, want updates preserved", tt.Status())
+	}
+
+	failed := newTask(1, "Checking DNF")
+	failed.SetStatus("failed")
+	setTaskResult(failed, nil)
+	if failed.Status() != "failed" {
+		t.Fatalf("status = %q, want failed preserved", failed.Status())
+	}
+
+	running := newTask(2, "Installing")
+	running.SetStatus("running")
+	setTaskResult(running, nil)
+	if running.Status() != "done" {
+		t.Fatalf("status = %q, want done", running.Status())
+	}
+}

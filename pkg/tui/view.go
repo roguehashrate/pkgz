@@ -24,6 +24,9 @@ var (
 	selectedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("220"))
 
+	tailStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("240"))
+
 	logBoxStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("240")).
@@ -156,7 +159,27 @@ func (m *Model) renderRow(idx int, t *Task) string {
 		row += lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Render("  " + label)
 	}
 
+	// Live tail: while a task is running, show its latest progress line so the
+	// user sees the operation actually working without opening the log pane.
+	if status == "running" {
+		if tail := t.LastLine(); tail != "" {
+			row += "\n" + tailStyle.Render("  ⏵ "+elide(tail, m.logWidth()-5))
+		}
+	}
+
 	return row
+}
+
+// elide truncates s to max runes, appending an ellipsis when cut.
+func elide(s string, max int) string {
+	if max <= 2 {
+		return ""
+	}
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max-1]) + "…"
 }
 
 func (m *Model) renderLog() string {

@@ -49,6 +49,17 @@ func (t *Task) Lines() []string {
 	return out
 }
 
+// LastLine returns the most recently captured output line (live progress tail),
+// or "" when nothing has been captured yet.
+func (t *Task) LastLine() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if len(t.output) == 0 {
+		return ""
+	}
+	return t.output[len(t.output)-1]
+}
+
 func (t *Task) SetLabel(label string) {
 	t.mu.Lock()
 	t.label = label

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -86,5 +87,82 @@ func TestParseDnfUpdatesSkipsErrorLines(t *testing.T) {
 	got := parseDnfUpdates(output)
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("parseDnfUpdates() = %v, want %v", got, want)
+	}
+}
+
+func TestMatchLines(t *testing.T) {
+	t.Run("apt style first-field names", func(t *testing.T) {
+		out := "firefox-esr - Powerful, extensible web browser\n" +
+			"fireshot - screenshot tool\n" +
+			"firestorm - strategy game\n"
+		got := matchLines(out, func(f []string) string {
+			return f[0]
+		}, func(line string, f []string) bool {
+			return strings.Contains(strings.ToLower(line), "firest")
+		})
+		if !reflect.DeepEqual(got, []string{"firestorm"}) {
+			t.Errorf("matchLines = %v, want [firestorm]", got)
+		}
+	})
+
+	t.Run("flatpak style appid (name)", func(t *testing.T) {
+		out := "com.mozilla.Firefox\tMozilla Firefox\n" +
+			"com.mozilla.Firefox.Nightly\tMozilla Firefox Nightly\n"
+		got := matchLines(out, func(f []string) string {
+			return f[0] + " (" + f[1] + ")"
+		}, nil)
+		want := []string{
+			"com.mozilla.Firefox (Mozilla Firefox)",
+			"com.mozilla.Firefox.Nightly (Mozilla Firefox Nightly)",
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("matchLines = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("caps matches at 15", func(t *testing.T) {
+		var out strings.Builder
+		for i := 0; i < 20; i++ {
+			out.WriteString("pkg" + strconv.Itoa(i) + " - thing\n")
+		}
+		got := matchLines(out.String(), func(f []string) string { return f[0] }, nil)
+		if len(got) != 15 {
+			t.Errorf("matchLines capped at %d, want 15", len(got))
+		}
+	})
+}
+
+func TestCommandSourceMemoizesProbes(t *testing.T) {
+	var availCalls, instCalls int
+	c := &commandSource{
+		available: func(app string) (bool, error) {
+			availCalls++
+			return true, nil
+		},
+		installed: func(app string) (bool, error) {
+			instCalls++
+			return false, nil
+		},
+	}
+	for i := 0; i < 3; i++ {
+		if ok, err := c.Available("vim"); err != nil || !ok {
+			t.Fatalf("Available(vim) = %v, %v", ok, err)
+		}
+		if ok, err := c.Installed("vim"); err != nil || ok {
+			t.Fatalf("Installed(vim) = %v, %v", ok, err)
+		}
+	}
+	if availCalls != 1 {
+		t.Errorf("available probed %d times, want 1", availCalls)
+	}
+	if instCalls != 1 {
+		t.Errorf("installed probed %d times, want 1", instCalls)
+	}
+
+	if ok, err := c.Available("VIM"); err != nil || !ok {
+		t.Errorf("Available memoized by case-insensitive key: %v, %v", ok, err)
+	}
+	if availCalls != 1 {
+		t.Errorf("available probed %d times after case-different call, want 1", availCalls)
 	}
 }

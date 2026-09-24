@@ -2,6 +2,7 @@ package linux
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/roguehashrate/pkgz/pkg/sources"
 	"github.com/roguehashrate/pkgz/pkg/utils"
@@ -9,7 +10,8 @@ import (
 
 // NewFlatpakSource returns a source backed by flatpak (cross-distro).
 func NewFlatpakSource(elevator *utils.Elevator) sources.Source {
-	c := &commandSource{
+	var c *commandSource
+	c = &commandSource{
 		name: "Flatpak",
 		available: func(app string) (bool, error) {
 			appID, err := flatpakFindAppID(app)
@@ -25,11 +27,9 @@ func NewFlatpakSource(elevator *utils.Elevator) sources.Source {
 		install: func(app string) error {
 			appID, err := flatpakFindAppID(app)
 			if err != nil || appID == "" {
-				_, err = utils.RunCommand("flatpak", "install", "--user", "-y", "flathub", app)
-				return err
+				return c.runOp(elevator, false, "flatpak", []string{"install", "--user", "-y", "flathub", app})
 			}
-			_, err = utils.RunCommand("flatpak", "install", "--user", "-y", "flathub", appID)
-			return err
+			return c.runOp(elevator, false, "flatpak", []string{"install", "--user", "-y", "flathub", appID})
 		},
 		remove: func(app string) error {
 			appID, scope := flatpakInstalledApp(app)
@@ -37,12 +37,10 @@ func NewFlatpakSource(elevator *utils.Elevator) sources.Source {
 				appID = app
 				scope = "--user"
 			}
-			_, err := utils.RunCommand("flatpak", "uninstall", scope, "-y", appID)
-			return err
+			return c.runOp(elevator, false, "flatpak", []string{"uninstall", scope, "-y", appID})
 		},
 		update: func() error {
-			_, err := utils.RunCommand("flatpak", "update", "--user", "-y")
-			return err
+			return c.runOp(elevator, false, "flatpak", []string{"update", "--user", "-y"})
 		},
 		listUpdates: func() ([]string, error) {
 			output, err := utils.RunCommand("flatpak", "remote-ls", "--user", "--updates")
@@ -71,20 +69,62 @@ func NewFlatpakSource(elevator *utils.Elevator) sources.Source {
 			}
 			return strings.Contains(strings.ToLower(output), strings.ToLower(app)), nil
 		},
+		searchMatches: func(app string) ([]string, error) {
+			output, err := utils.RunCommand("flatpak", "search", "--columns=application,name", app)
+			if err != nil {
+				return nil, nil
+			}
+			return matchLines(output, func(fields []string) string {
+				if len(fields) == 0 || fields[0] == "" {
+					return ""
+				}
+				id := fields[0]
+				if len(fields) > 1 {
+					return id + " (" + fields[1] + ")"
+				}
+				return id
+			}, func(line string, fields []string) bool {
+				return containsAny(fields, strings.ToLower(app))
+			}), nil
+		},
 		installedCount: countOutput("flatpak", "list", "--user", "--app"),
 	}
 	return c
 }
 
+// flatpakMemo guards the per-run lookup caches below. One-shot CLI: results stay
+// valid for the process lifetime.
+var flatpakMemo struct {
+	mu       sync.Mutex
+	appID    map[string]string // lowercase app -> resolved search appID ("" = not found)
+	insID    map[string]string // lowercase app -> installed appID ("" = not installed)
+	insScope map[string]string // lowercase app -> installed scope ("--user"/"--system")
+}
+
 func flatpakFindAppID(app string) (string, error) {
+	key := strings.ToLower(app)
+	flatpakMemo.mu.Lock()
+	if flatpakMemo.appID == nil {
+		flatpakMemo.appID = make(map[string]string)
+	}
+	if id, ok := flatpakMemo.appID[key]; ok {
+		flatpakMemo.mu.Unlock()
+		return id, nil
+	}
+	flatpakMemo.mu.Unlock()
+
 	output, err := utils.RunCommand("flatpak", "search", "--columns=application,name", app)
 	if err != nil {
+		flatpakMemo.mu.Lock()
+		flatpakMemo.appID[key] = ""
+		flatpakMemo.mu.Unlock()
 		return "", err
 	}
 
 	lines := strings.Split(output, "\n")
 	appLower := strings.ToLower(app)
 
+	var id string
 	for _, line := range lines {
 		if line == "" {
 			continue
@@ -93,23 +133,42 @@ func flatpakFindAppID(app string) (string, error) {
 		if len(parts) != 2 {
 			continue
 		}
-		appID := parts[0]
-		appName := parts[1]
-
-		if strings.Contains(strings.ToLower(appName), appLower) ||
-			strings.Contains(strings.ToLower(appID), appLower) {
-			return appID, nil
+		cand := strings.TrimSpace(parts[0])
+		name := strings.TrimSpace(parts[1])
+		if cand == appLower {
+			id = cand
+			break
+		}
+		if id == "" && (strings.Contains(strings.ToLower(name), appLower) ||
+			strings.Contains(strings.ToLower(cand), appLower)) {
+			id = cand
 		}
 	}
-	return "", nil
+	flatpakMemo.mu.Lock()
+	flatpakMemo.appID[key] = id
+	flatpakMemo.mu.Unlock()
+	return id, nil
 }
 
 // flatpakInstalledApp returns the App ID and scope (--user or --system) of an
 // installed flatpak matching app, or empty strings if it is not installed.
 func flatpakInstalledApp(app string) (appID, scope string) {
+	key := strings.ToLower(app)
+	flatpakMemo.mu.Lock()
+	if flatpakMemo.insID == nil {
+		flatpakMemo.insID = make(map[string]string)
+		flatpakMemo.insScope = make(map[string]string)
+	}
+	if id, ok := flatpakMemo.insID[key]; ok {
+		sc := flatpakMemo.insScope[key]
+		flatpakMemo.mu.Unlock()
+		return id, sc
+	}
+	flatpakMemo.mu.Unlock()
+
 	appLower := strings.ToLower(app)
-	for _, scope := range []string{"--user", "--system"} {
-		output, err := utils.RunCommand("flatpak", "list", scope, "--columns=application,name")
+	for _, sc := range []string{"--user", "--system"} {
+		output, err := utils.RunCommand("flatpak", "list", sc, "--columns=application,name")
 		if err != nil {
 			// Installing in another scope can make a listing command fail; keep trying.
 			continue
@@ -124,11 +183,30 @@ func flatpakInstalledApp(app string) (appID, scope string) {
 			}
 			id := strings.TrimSpace(parts[0])
 			name := strings.TrimSpace(parts[1])
-			if strings.Contains(strings.ToLower(id), appLower) ||
-				strings.Contains(strings.ToLower(name), appLower) {
-				return id, scope
+			if id == appLower || id != "" &&
+				(strings.Contains(strings.ToLower(id), appLower) ||
+					strings.Contains(strings.ToLower(name), appLower)) {
+				flatpakMemo.mu.Lock()
+				flatpakMemo.insID[key] = id
+				flatpakMemo.insScope[key] = sc
+				flatpakMemo.mu.Unlock()
+				return id, sc
 			}
 		}
 	}
+	flatpakMemo.mu.Lock()
+	flatpakMemo.insID[key] = ""
+	flatpakMemo.insScope[key] = ""
+	flatpakMemo.mu.Unlock()
 	return "", ""
+}
+
+// containsAny reports whether any field contains the lower-cased needle.
+func containsAny(fields []string, needle string) bool {
+	for _, f := range fields {
+		if strings.Contains(f, needle) {
+			return true
+		}
+	}
+	return false
 }

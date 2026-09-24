@@ -17,6 +17,45 @@ func (s stubSource) ListUpdates() ([]string, error) { return nil, nil }
 func (s stubSource) Search(string) (bool, error)    { return false, nil }
 func (s stubSource) InstalledCount() (int, error)   { return 0, nil }
 
+type matcherStub struct {
+	stubSource
+	matches []string
+}
+
+func (m matcherStub) SearchMatches(_ string) ([]string, error) { return m.matches, nil }
+
+type describedStub struct {
+	stubSource
+	desc string
+}
+
+func (d describedStub) Description() string { return d.desc }
+
+func TestSearchSourcePreferSearchMatches(t *testing.T) {
+	withMatches := matcherStub{stubSource: stubSource{name: "Apt"}, matches: []string{"vim", "vim-gtk"}}
+	found, matches, err := searchSource(withMatches, "vim")
+	if err != nil || !found || len(matches) != 2 {
+		t.Errorf("searchSource(matches) = %v, %v, %v; want true, 2 matches, nil", found, matches, err)
+	}
+
+	noMatches := matcherStub{stubSource: stubSource{name: "Flatpak"}}
+	found, matches, err = searchSource(noMatches, "vim")
+	if err != nil || found {
+		t.Errorf("searchSource(empty) = %v, %v, %v; want false, nil", found, matches, err)
+	}
+}
+
+func TestSourceDisplay(t *testing.T) {
+	plain := stubSource{name: "DNF"}
+	if got := sourceDisplay(plain); got != "DNF" {
+		t.Errorf("sourceDisplay(DNF) = %q, want DNF", got)
+	}
+	desc := describedStub{stubSource: stubSource{name: "Apt"}, desc: "native Debian/Ubuntu packages"}
+	if got := sourceDisplay(desc); got != "Apt — native Debian/Ubuntu packages" {
+		t.Errorf("sourceDisplay(Apt) = %q", got)
+	}
+}
+
 func TestParseArgs(t *testing.T) {
 	force, pkgs := parseArgs([]string{"--source", "apt", "vim", "curl"})
 	if force != "apt" || !reflect.DeepEqual(pkgs, []string{"vim", "curl"}) {

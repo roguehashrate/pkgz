@@ -1,6 +1,8 @@
 package linux
 
 import (
+	"strings"
+
 	"github.com/roguehashrate/pkgz/pkg/sources"
 	"github.com/roguehashrate/pkgz/pkg/utils"
 )
@@ -9,7 +11,8 @@ import (
 func NewAptSource(elevator *utils.Elevator) sources.Source {
 	var c *commandSource
 	c = &commandSource{
-		name: "Apt",
+		name:        "Apt",
+		description: "native Debian/Ubuntu packages",
 		available: availableContains("apt-cache", func(app string) []string {
 			return []string{"search", app}
 		}),
@@ -29,6 +32,17 @@ func NewAptSource(elevator *utils.Elevator) sources.Source {
 		search: searchContains("apt-cache", func(app string) []string {
 			return []string{"search", app}
 		}),
+		searchMatches: func(app string) ([]string, error) {
+			output, err := utils.RunCommand("apt-cache", "search", app)
+			if err != nil {
+				return nil, err
+			}
+			return matchLines(output, func(fields []string) string {
+				return fields[0]
+			}, func(line string, fields []string) bool {
+				return strings.Contains(strings.ToLower(line), strings.ToLower(app))
+			}), nil
+		},
 		installedCount: countOutput("dpkg-query", "-f", ".\n", "-W"),
 
 		installPrivileged: true,

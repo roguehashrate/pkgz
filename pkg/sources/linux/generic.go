@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/roguehashrate/pkgz/pkg/sources"
 	"github.com/roguehashrate/pkgz/pkg/utils"
@@ -16,8 +17,9 @@ import (
 // helpers below for the common patterns (contains-search, redirect-installed,
 // first-field parsing, streaming execution).
 type commandSource struct {
-	name string
-	task utils.Task
+	name        string
+	description string
+	task        utils.Task
 
 	available      func(app string) (bool, error)
 	installed      func(app string) (bool, error)
@@ -26,6 +28,7 @@ type commandSource struct {
 	update         func() error
 	listUpdates    func() ([]string, error)
 	search         func(app string) (bool, error)
+	searchMatches  func(app string) ([]string, error)
 	installedCount func() (int, error)
 
 	// Privilege flags: whether each op escalates privileges (e.g. via
@@ -34,19 +37,86 @@ type commandSource struct {
 	installPrivileged bool
 	removePrivileged  bool
 	updatePrivileged  bool
+
+	// memo caches per-run lookups so repeated probes within one invocation
+	// (install -> available -> install, info, remove) don't re-run slow
+	// commands like `apt-cache search` or `flatpak search` (multi-second each).
+	memo struct {
+		mu       sync.Mutex
+		avail    map[string]memoEntry
+		inst     map[string]memoEntry
+		updates  []string
+		updReady bool
+	}
+}
+
+// memoEntry caches a (ok, err) probe result keyed by lower-cased app name.
+type memoEntry struct {
+	ok  bool
+	err error
 }
 
 var _ sources.Source = (*commandSource)(nil)
 
-func (c *commandSource) Name() string                       { return c.name }
-func (c *commandSource) Available(app string) (bool, error) { return c.available(app) }
-func (c *commandSource) Installed(app string) (bool, error) { return c.installed(app) }
-func (c *commandSource) Install(app string) error           { return c.install(app) }
-func (c *commandSource) Remove(app string) error            { return c.remove(app) }
-func (c *commandSource) Update() error                      { return c.update() }
-func (c *commandSource) ListUpdates() ([]string, error)     { return c.listUpdates() }
-func (c *commandSource) Search(app string) (bool, error)    { return c.search(app) }
-func (c *commandSource) InstalledCount() (int, error)       { return c.installedCount() }
+func (c *commandSource) Name() string        { return c.name }
+func (c *commandSource) Description() string { return c.description }
+func (c *commandSource) Available(app string) (bool, error) {
+	return c.memoizedAppProbe(&c.memo.avail, app, c.available)
+}
+func (c *commandSource) Installed(app string) (bool, error) {
+	return c.memoizedAppProbe(&c.memo.inst, app, c.installed)
+}
+func (c *commandSource) Install(app string) error        { return c.install(app) }
+func (c *commandSource) Remove(app string) error         { return c.remove(app) }
+func (c *commandSource) Update() error                   { return c.update() }
+func (c *commandSource) ListUpdates() ([]string, error)  { return c.memoizedUpdates() }
+func (c *commandSource) Search(app string) (bool, error) { return c.search(app) }
+func (c *commandSource) SearchMatches(app string) ([]string, error) {
+	if c.searchMatches == nil {
+		return nil, nil
+	}
+	return c.searchMatches(app)
+}
+func (c *commandSource) InstalledCount() (int, error) { return c.installedCount() }
+
+// memoizedAppProbe runs probe the first time an app is asked about and returns
+// the cached result afterwards.
+func (c *commandSource) memoizedAppProbe(cache *map[string]memoEntry, app string, probe func(string) (bool, error)) (bool, error) {
+	key := strings.ToLower(app)
+	c.memo.mu.Lock()
+	if *cache == nil {
+		*cache = make(map[string]memoEntry)
+	}
+	if e, ok := (*cache)[key]; ok {
+		c.memo.mu.Unlock()
+		return e.ok, e.err
+	}
+	c.memo.mu.Unlock()
+
+	ok, err := probe(app)
+	c.memo.mu.Lock()
+	(*cache)[key] = memoEntry{ok: ok, err: err}
+	c.memo.mu.Unlock()
+	return ok, err
+}
+
+// memoizedUpdates runs the update-list query once per invocation (it is stable
+// within a run and can be slow) and replays the result for refresh/info flows.
+func (c *commandSource) memoizedUpdates() ([]string, error) {
+	c.memo.mu.Lock()
+	if c.memo.updReady {
+		c.memo.mu.Unlock()
+		return c.memo.updates, nil
+	}
+	c.memo.mu.Unlock()
+
+	updates, err := c.listUpdates()
+	c.memo.mu.Lock()
+	c.memo.updates = updates
+	c.memo.updReady = true
+	c.memo.mu.Unlock()
+	return updates, err
+}
 
 // Privilege getters let the UI decide whether to run an op with direct terminal
 // control (to accept sudo/doas passwords).
@@ -116,6 +186,43 @@ func countOutput(bin string, args ...string) func() (int, error) {
 		}
 		return len(lines), nil
 	}
+}
+
+// splitFields splits a search result line into its fields. Tab-delimited output
+// (flatpak: "appid\tname") keeps the name intact; space-delimited output
+// (apt-cache: "pkg - description") falls back to whitespace splitting.
+func splitFields(line string) []string {
+	if fields := strings.SplitN(line, "\t", 2); len(fields) == 2 {
+		return []string{strings.TrimSpace(fields[0]), strings.TrimSpace(fields[1])}
+	}
+	return strings.Fields(line)
+}
+
+// matchLines parses tab/first-field separated search output, keeping at most
+// maxResults lines where keep matches. format maps a line's fields to the
+// human-friendly result string ("" to skip the line).
+func matchLines(output string, format func([]string) string, keep func(string, []string) bool) []string {
+	matches := make([]string, 0, 15)
+	for _, line := range strings.Split(strings.TrimRight(output, "\n"), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		fields := splitFields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		if keep != nil && !keep(line, fields) {
+			continue
+		}
+		if m := format(fields); m != "" {
+			matches = append(matches, m)
+			if len(matches) >= 15 {
+				break
+			}
+		}
+	}
+	return matches
 }
 
 // listFirstField parses an update list as the first whitespace-delimited field
@@ -211,13 +318,23 @@ func newAurSource(elevator *utils.Elevator, name, binary string) sources.Source 
 	return c
 }
 
-// aptStatusPair splits the `dpkg-query -W` output line into status and package.
+// aptStatusLines splits the `dpkg-query -W` output into status/package lines.
+// The full installed list is queried once per invocation (it is stable) and
+// reused by every installe/remove probe.
+var aptStatusOnce struct {
+	sync.Once
+	lines []string
+}
+
 func aptStatusLines() []string {
-	out, err := utils.RunCommand("dpkg-query", "-W", "-f=${db:Status-Abbrev} ${Package}\n")
-	if err != nil {
-		return nil
-	}
-	return strings.Split(strings.TrimSpace(out), "\n")
+	aptStatusOnce.Do(func() {
+		out, err := utils.RunCommand("dpkg-query", "-W", "-f=${db:Status-Abbrev} ${Package}\n")
+		if err != nil {
+			return
+		}
+		aptStatusOnce.lines = strings.Split(strings.TrimSpace(out), "\n")
+	})
+	return aptStatusOnce.lines
 }
 
 // aptMatchPackages returns fully-installed package names that match app:

@@ -2,12 +2,47 @@ package utils
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 )
+
+// ansiRe strips common ANSI CSI escape sequences (color, cursor moves,
+// erase-line) from captured child output so progress lines render cleanly
+// instead of as raw escape garbage inside the log pane.
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]`)
+
+// scanProgress is a bufio.SplitFunc that breaks output on `\r`, `\n` or `\r\n`.
+// Package-manager progress meters rewrite the same line with `\r`; splitting on
+// it turns each progress frame into its own line instead of one growing blob.
+func scanProgress(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.IndexAny(data, "\r\n"); i >= 0 {
+		return i + 1, data[:i], nil
+	}
+	if atEOF {
+		return len(data), data, nil
+	}
+	return 0, nil, nil
+}
+
+// cleanLine strips ANSI escapes and stray carriage returns/trailing whitespace
+// from a captured progress line, returning "" for effectively-empty frames.
+func cleanLine(s string) string {
+	s = ansiRe.ReplaceAllString(s, "")
+	s = strings.TrimRight(s, "\r")
+	s = strings.TrimSpace(s)
+	if s == "\n" {
+		return ""
+	}
+	return s
+}
 
 // RunCommandStreaming runs a command, forwarding each line of its combined
 // stdout+stderr to onLine, and keeping stdin attached so interactive prompts
@@ -36,9 +71,14 @@ func RunCommandStreaming(name string, args []string, onLine func(string)) error 
 	go func() {
 		defer wgdone.Done()
 		scanner := bufio.NewScanner(io.MultiReader(stdout, stderr))
+		scanner.Split(scanProgress)
 		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 		for scanner.Scan() {
-			lineCh <- scanner.Text()
+			line := cleanLine(scanner.Text())
+			if line == "" {
+				continue
+			}
+			lineCh <- line
 		}
 	}()
 

@@ -222,8 +222,8 @@ When an app is available from multiple sources (e.g. emacs in both Apt and Flatp
 
 'emacs' is available via multiple sources. Choose one:
 
-▸ Apt
-  Flatpak
+▸ Apt — native Debian/Ubuntu packages
+  Flatpak — sandboxed apps from Flathub
 
 ↑/↓ move · enter select · q quit
 ```
@@ -253,10 +253,31 @@ silent prompt:
 
 ```
 $ pkgz install gimp
+🔍 Searching for 'gimp' in sources…
+✓ Apt — native Debian/Ubuntu packages — found
+◌ Flatpak — sandboxed apps from Flathub — searching…
 ⚠️ 'gimp' is available via multiple sources:
-1. APT
-2. Flatpak
+1. Apt — native Debian/Ubuntu packages
+2. Flatpak — sandboxed apps from Flathub
 Which one would you like to use? [1-2]: 2
+```
+
+Sources are probed **in parallel** with a live status line on a terminal, so the
+multi-second lookups (e.g. Flatpak's remote search) never hang silently. Probe
+results and package lookups are cached for the whole run, so `pkgz install`
+never searches the same package twice.
+
+`pkgz search` also lists the actual matching packages for Apt and Flatpak
+instead of just a yes/no:
+
+```
+$ pkgz search firefox
+✅ Found in Apt (3 match(es)):
+    - firefox-esr
+    - firefox-esr-l10n-all
+    - firefox-esr-l10n-ach
+✅ Found in Flatpak (1 match(es)):
+    - org.mozilla.firefox (Firefox)
 ```
 
 ---

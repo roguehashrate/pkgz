@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/mattn/go-isatty"
 	"github.com/roguehashrate/pkgz/pkg/config"
@@ -167,6 +168,34 @@ type Source interface {
 	InstalledCount() (int, error)
 }
 
+// describedSource is implemented by sources that can explain themselves (used
+// in pickers and listings so users choose knowingly).
+type describedSource interface {
+	Description() string
+}
+
+// matchSearcher is implemented by sources that can list the matching package
+// names for a search (apt/flatpak), instead of just a yes/no.
+type matchSearcher interface {
+	SearchMatches(app string) ([]string, error)
+}
+
+// sourceDescription returns a source's human description, if it has one.
+func sourceDescription(s Source) string {
+	if d, ok := s.(describedSource); ok {
+		return d.Description()
+	}
+	return ""
+}
+
+// sourceDisplay returns "Name — description" when a description exists.
+func sourceDisplay(s Source) string {
+	if desc := sourceDescription(s); desc != "" {
+		return s.Name() + " — " + desc
+	}
+	return s.Name()
+}
+
 // privSource is implemented by sources that can report whether each of their
 // operations escalates privileges (requiring sudo/doas), so the TUI knows it
 // must release the terminal to accept a password prompt.
@@ -260,7 +289,6 @@ func handleInstall(apps []string, forceName string, sources []Source) error {
 }
 
 func handleInstallOne(app string, sources []Source) error {
-	fmt.Printf("🔍 Searching for '%s' in sources...\n", app)
 	srcs := availableSourcesFor(app, sources)
 	if len(srcs) == 0 {
 		return fmt.Errorf("❌ App '%s' not found in any enabled source.", app)
@@ -370,7 +398,7 @@ func runPick(verb, app string, sources []Source, build func(Source) tui.Op) erro
 	choices := make([]string, len(sources))
 	ops := make([]tui.Op, len(sources))
 	for i, src := range sources {
-		choices[i] = src.Name()
+		choices[i] = sourceDisplay(src)
 		ops[i] = build(src)
 	}
 
@@ -384,7 +412,7 @@ func runPick(verb, app string, sources []Source, build func(Source) tui.Op) erro
 	if stdinTerminal() {
 		fmt.Printf("⚠️ '%s' is available via multiple sources:\n", app)
 		for i, src := range sources {
-			fmt.Printf("%d. %s\n", i+1, src.Name())
+			fmt.Printf("%d. %s\n", i+1, sourceDisplay(src))
 		}
 		fmt.Printf("Which one would you like to use? [1-%d]: ", len(sources))
 		input, _ := bufio.NewReader(os.Stdin).ReadString('\n')
@@ -401,26 +429,151 @@ func runPick(verb, app string, sources []Source, build func(Source) tui.Op) erro
 	return fmt.Errorf("select a source explicitly with --source NAME for '%s'", app)
 }
 
-// availableSourcesFor returns the sources where the app is available.
+// availableSourcesFor returns the sources where the app is available, probing
+// all candidates concurrently with a live status display.
 func availableSourcesFor(app string, sources []Source) []Source {
-	var out []Source
-	for _, s := range sources {
-		if ok, _ := s.Available(app); ok {
-			out = append(out, s)
-		}
-	}
-	return out
+	return probeSources(app, sources, func(s Source) bool {
+		ok, _ := s.Available(app)
+		return ok
+	})
 }
 
-// installedSourcesFor returns the sources where the app is installed.
+// installedSourcesFor returns the sources where the app is installed, probing
+// all candidates concurrently with a live status display.
 func installedSourcesFor(app string, sources []Source) []Source {
-	var out []Source
+	return probeSources(app, sources, func(s Source) bool {
+		ok, _ := s.Installed(app)
+		return ok
+	})
+}
+
+// probeSources runs fn against every source concurrently and returns those for
+// which fn reported true. On an interactive terminal it paints a live per-source
+// status block ("◌ Apt — searching…", "✓ Flatpak — found") that updates in
+// place, so multi-second probes (flatpak search ~4s) never hang silently.
+func probeSources(app string, sources []Source, fn func(Source) bool) []Source {
+	var (
+		mu      sync.Mutex
+		results []Source
+		wg      sync.WaitGroup
+	)
+	status := newProbeStatus(app, sources)
+	status.start()
+
 	for _, s := range sources {
-		if ok, _ := s.Installed(app); ok {
-			out = append(out, s)
+		wg.Add(1)
+		go func(s Source) {
+			defer wg.Done()
+			ok := fn(s)
+			status.mark(s.Name(), ok)
+			if ok {
+				mu.Lock()
+				results = append(results, s)
+				mu.Unlock()
+			}
+		}(s)
+	}
+	wg.Wait()
+	status.finish()
+	return results
+}
+
+// probeEntry is the per-source row state rendered by probeStatus.
+type probeEntry struct {
+	name  string
+	desc  string
+	done  bool
+	found bool
+}
+
+// probeStatus renders the concurrent source probe on a terminal. It is a no-op
+// when stdout is not a TTY, keeping piped/script output stable.
+type probeStatus struct {
+	mu      sync.Mutex
+	w       io.Writer
+	app     string
+	entries []probeEntry
+	live    bool
+	started bool
+}
+
+func newProbeStatus(app string, sources []Source) *probeStatus {
+	p := &probeStatus{w: os.Stdout, app: app, live: isTerminal()}
+	for _, s := range sources {
+		p.entries = append(p.entries, probeEntry{name: s.Name(), desc: sourceDescription(s)})
+	}
+	return p
+}
+
+func (p *probeStatus) start() {
+	if !p.live {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.started {
+		return
+	}
+	fmt.Fprintf(p.w, "🔍 Searching for '%s' in sources…\n", p.app)
+	p.redrawLocked()
+	p.started = true
+}
+
+// mark records the probe result for a source name and updates the display.
+func (p *probeStatus) mark(name string, found bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for i := range p.entries {
+		if p.entries[i].name == name {
+			p.entries[i].done = true
+			p.entries[i].found = found
+			break
 		}
 	}
-	return out
+	if p.live && p.started {
+		p.redrawLocked()
+	}
+}
+
+func (p *probeStatus) finish() {
+	if !p.live {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.redrawLocked()
+	fmt.Fprintln(p.w)
+}
+
+// redrawLocked rewrites the probe block in place (cursor up + clear each line).
+func (p *probeStatus) redrawLocked() {
+	n := len(p.entries)
+	if n == 0 {
+		return
+	}
+	fmt.Fprintf(p.w, "\x1b[%dA", n)
+	for i := range p.entries {
+		fmt.Fprintf(p.w, "\x1b[2K%s", p.row(i))
+		if i < n-1 {
+			fmt.Fprintln(p.w)
+		}
+	}
+}
+
+func (p *probeStatus) row(i int) string {
+	e := p.entries[i]
+	name := e.name
+	if e.desc != "" {
+		name += " — " + e.desc
+	}
+	switch {
+	case e.done && e.found:
+		return "✓ " + name + " — found"
+	case e.done:
+		return "— " + name + " — not found"
+	default:
+		return "◌ " + name + " — searching…"
+	}
 }
 
 // commonSingleSource returns the single source in which every app is available,
@@ -619,7 +772,7 @@ func handleSearchOne(app string, forceName string, sources []Source) error {
 		ops = append(ops, tui.Op{
 			Label: "Searching " + src.Name(),
 			Run: func(t *tui.Task) error {
-				found, err := src.Search(app)
+				found, matches, err := searchSource(src, app)
 				if err != nil {
 					t.SetStatus("failed")
 					t.SetLabel(src.Name() + " — search failed")
@@ -628,8 +781,15 @@ func handleSearchOne(app string, forceName string, sources []Source) error {
 				}
 				if found {
 					t.SetStatus("done")
-					t.SetLabel("Found in " + src.Name())
+					if len(matches) > 0 {
+						t.SetLabel(fmt.Sprintf("Found %d match(es) in %s", len(matches), src.Name()))
+					} else {
+						t.SetLabel("Found in " + src.Name())
+					}
 					t.AppendOutput(fmt.Sprintf("'%s' is available via %s.", app, src.Name()))
+					for _, m := range matches {
+						t.AppendOutput("  " + m)
+					}
 					return nil
 				}
 				t.SetStatus("done")
@@ -648,19 +808,40 @@ func handleSearchOne(app string, forceName string, sources []Source) error {
 	return searchPlain(app, search)
 }
 
+// searchSource checks a source for app. Sources that can list matches
+// (apt/flatpak) return them alongside the boolean; others just return a bool.
+func searchSource(src Source, app string) (found bool, matches []string, err error) {
+	if ms, ok := src.(matchSearcher); ok {
+		matches, err := ms.SearchMatches(app)
+		if err != nil {
+			return false, nil, err
+		}
+		return len(matches) > 0, matches, nil
+	}
+	found, err = src.Search(app)
+	return found, nil, err
+}
+
 // searchPlain prints the per-source search result without a terminal.
 func searchPlain(app string, sources []Source) error {
 	var failed bool
 	foundAny := false
 	for _, src := range sources {
-		found, err := src.Search(app)
+		found, matches, err := searchSource(src, app)
 		if err != nil {
 			fmt.Printf("❌ %s: search failed: %v\n", src.Name(), err)
 			failed = true
 			continue
 		}
 		if found {
-			fmt.Printf("✅ Found in %s\n", src.Name())
+			if len(matches) > 0 {
+				fmt.Printf("✅ Found in %s (%d match(es)):\n", src.Name(), len(matches))
+				for _, m := range matches {
+					fmt.Printf("    - %s\n", m)
+				}
+			} else {
+				fmt.Printf("✅ Found in %s\n", src.Name())
+			}
 			foundAny = true
 		} else {
 			fmt.Printf("— Not found in %s\n", src.Name())
